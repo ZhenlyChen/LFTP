@@ -5,6 +5,7 @@ import cn.zhenly.LFTP.NetUDP.PacketType;
 import cn.zhenly.LFTP.NetUDP.UDPPacket;
 import picocli.CommandLine.*;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -21,19 +22,20 @@ public class Send implements Runnable {
   @Override
   public void run() {
     System.out.println(server);
+    if (file.size() == 0) {
+      System.out.println("no file to send.");
+      return;
+    }
     for (String f : file) {
       System.out.println(f);
     }
     try {
       NetUDP netUDP = new NetUDP(9000, InetAddress.getLocalHost(), 3000);
-      netUDP.setTimeOut(2000);
-      netUDP.UDPSend(new UDPPacket(0, "Hello world!".getBytes(), PacketType.DATA));
-      UDPPacket res = netUDP.UDPReceive();
-      if (res != null) {
-        System.out.println(res.getType().toString());
-      }
+      netUDP.send("Hello, LFTP".getBytes());
+      netUDP.send("Hello, LFTP2".getBytes());
+      netUDP.send("Hello, LFTP3".getBytes());
       netUDP.close();
-    } catch (UnknownHostException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
   }

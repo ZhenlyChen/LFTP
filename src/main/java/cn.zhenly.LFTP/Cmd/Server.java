@@ -18,18 +18,11 @@ public class Server implements Runnable {
 
   @Override
   public void run() {
-    NetUDP netUDP = new NetUDP(port);
-    while (true) {
-      UDPPacket data = netUDP.UDPReceive();
-      System.out.println("server received data from client：");
-      if (data != null) {
-        System.out.println(data.getPacket().getAddress().getHostAddress() + ":" + data.getPacket().getPort());
-        System.out.println(new String(data.getContent()));
-        System.out.println(data.getId());
-        System.out.println(data.getType());
-        netUDP.setTarget(data.getPacket().getAddress(), data.getPacket().getPort());
-        netUDP.UDPSend(new UDPPacket(data.getId(), "ACK".getBytes(), PacketType.ACK));
-      }
+    if (port <= 1024 || data == null) {
+      System.out.println("Error port or data");
+      return;
     }
+    NetUDP netUDP = new NetUDP(port);
+    netUDP.listen();
   }
 }
