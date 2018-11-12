@@ -1,5 +1,7 @@
 package cn.zhenly.LFTP.NetUDP;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -7,7 +9,6 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class NetUDP {
   private int seq; // 包序号
@@ -28,7 +29,7 @@ public class NetUDP {
   }
 
   // 设置目标
-  public void setTarget(InetAddress targetIP, int targetPort) {
+  private void setTarget(InetAddress targetIP, int targetPort) {
     this.targetPort = targetPort;
     this.targetIP = targetIP;
   }
@@ -53,7 +54,7 @@ public class NetUDP {
     }
   }
 
-  public UDPPacket UDPReceive() {
+  private UDPPacket UDPReceive() {
     byte[] buf = new byte[1024];
     DatagramPacket p = new DatagramPacket(buf, 1024);
     try {
@@ -69,7 +70,7 @@ public class NetUDP {
   }
 
   public void listen() {
-    while(true) {
+    while (true) {
       UDPPacket data = UDPReceive();
       System.out.println("server received data from client：");
       if (data != null) {
@@ -88,9 +89,9 @@ public class NetUDP {
     }
   }
 
-
-  public void send(byte[] content) throws IOException {
+  public void send(byte[] content, UDPPacket.ACKCallBack callBack) throws IOException {
     UDPPacket packet = new UDPPacket(seq++);
+    packet.setCallBack(callBack);
     packet.setData(content);
     this.bufferPackets.add(packet);
     if (!running) {
@@ -104,18 +105,28 @@ public class NetUDP {
     socket.setSoTimeout(2000);
     while (bufferPackets.size() > 0) {
       UDPPacket packet = bufferPackets.poll();
+      int errorCount = 0;
       while (true) {
         UDPSend(packet);
         UDPPacket rec = UDPReceive();
-        if (rec != null && rec.isValid() && rec.isFlagACK() && rec.getAck() == packet.getSeq()) {
+        if (rec != null && rec.isValid() && rec.isACK() && rec.getAck() == packet.getSeq()) {
+          if (packet.getCallBack() != null) {
+            packet.getCallBack().success(rec);
+          }
           break;
+        } else {
+          errorCount++;
+        }
+        if (errorCount > 5) {
+          System.out.println("[ERROR] System error.");
+          System.exit(-1);
         }
       }
     }
     this.running = false;
   }
 
-  public void UDPSend(UDPPacket packetData) throws IOException {
+  private void UDPSend(@NotNull UDPPacket packetData) throws IOException {
     byte[] data = packetData.getByte();
     DatagramPacket packet = new DatagramPacket(data, data.length, this.targetIP, this.targetPort);
     socket.send(packet);

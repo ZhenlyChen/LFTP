@@ -2,20 +2,33 @@ package cn.zhenly.LFTP.NetUDP;
 
 import java.io.*;
 import java.net.DatagramPacket;
-import java.util.Objects;
 
+// 基本数据包
 public class UDPPacket implements Serializable {
   private static final transient String TEMP_ENCODING = "ISO-8859-1";
   private static final transient String DEFAULT_ENCODING = "UTF-8";
+  private transient ACKCallBack callBack;
   private transient DatagramPacket packet;
-  private int winSize; // 串口大小
+  private int winSize; // 窗口大小 (拥塞控制)
   private int seq; // 序列号
   private int ack; // 确认号
-  private boolean flagACK; // ACK标志位
-  private boolean flagSYN; // SYN标志位
-  private boolean flagFIN; // FIN标志位
+  private boolean ACK; // ACK标志位
+  private boolean SYN; // SYN标志位
+  private boolean FIN; // FIN标志位
   private int[] checkSum; // 校验和
   private byte[] data; // 数据包
+
+  public ACKCallBack getCallBack() {
+    return callBack;
+  }
+
+  public void setCallBack(ACKCallBack callBack) {
+    this.callBack = callBack;
+  }
+
+  public interface ACKCallBack {
+    void success(UDPPacket data);
+  }
 
   public UDPPacket(int seq) {
     this.seq = seq;
@@ -68,7 +81,7 @@ public class UDPPacket implements Serializable {
   }
 
   public void setAck(int ack) {
-    this.flagACK = true;
+    this.ACK = true;
     this.ack = ack;
   }
 
@@ -80,28 +93,28 @@ public class UDPPacket implements Serializable {
     this.seq = seq;
   }
 
-  public boolean isFlagACK() {
-    return flagACK;
+  public boolean isACK() {
+    return ACK;
   }
 
-  public void setFlagACK(boolean flagACK) {
-    this.flagACK = flagACK;
+  public void setACK(boolean ACK) {
+    this.ACK = ACK;
   }
 
-  public boolean isFlagSYN() {
-    return flagSYN;
+  public boolean isSYN() {
+    return SYN;
   }
 
-  public void setFlagSYN(boolean flagSYN) {
-    this.flagSYN = flagSYN;
+  public void setSYN(boolean SYN) {
+    this.SYN = SYN;
   }
 
-  public boolean isFlagFIN() {
-    return flagFIN;
+  public boolean isFIN() {
+    return FIN;
   }
 
-  public void setFlagFIN(boolean flagFIN) {
-    this.flagFIN = flagFIN;
+  public void setFIN(boolean FIN) {
+    this.FIN = FIN;
   }
 
   public int getWinSize() {

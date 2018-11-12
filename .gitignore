@@ -1,2 +1,4 @@
 .gradle/*
 out/*
+data/*
+lib/*
