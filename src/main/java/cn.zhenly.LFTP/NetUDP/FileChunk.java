@@ -7,4 +7,5 @@ public class FileChunk implements Serializable {
   public String name;
   public int id;
   public byte[] data;
+  public String hash;
 }

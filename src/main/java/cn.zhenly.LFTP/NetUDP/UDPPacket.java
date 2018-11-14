@@ -15,7 +15,6 @@ public class UDPPacket implements Serializable {
   private boolean ACK; // ACK标志位
   private boolean SYN; // SYN标志位
   private boolean FIN; // FIN标志位
-  private int[] checkSum; // 校验和
   private byte[] data; // 数据包
 
   public ACKCallBack getCallBack() {
@@ -32,11 +31,6 @@ public class UDPPacket implements Serializable {
 
   public UDPPacket(int seq) {
     this.seq = seq;
-  }
-
-  public boolean isValid() {
-    // 检验校验和
-    return true;
   }
 
   public byte[] getByte() {
@@ -125,11 +119,4 @@ public class UDPPacket implements Serializable {
     this.winSize = winSize;
   }
 
-  public int[] getCheckSum() {
-    return checkSum;
-  }
-
-  public void setCheckSum(int[] checkSum) {
-    this.checkSum = checkSum;
-  }
 }

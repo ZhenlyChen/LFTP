@@ -11,6 +11,7 @@ public class Main implements Runnable {
     cmd.addSubcommand("server", new Server());
     cmd.addSubcommand("lsend", new Send());
     cmd.addSubcommand("lget", new Get());
+    cmd.addSubcommand("list", new GetList());
     cmd.parseWithHandler(new RunLast(), args);
   }
 

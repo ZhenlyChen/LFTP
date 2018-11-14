@@ -7,4 +7,5 @@ public class FileMeta implements Serializable {
   public String name;
   public int size;
   public int chunkCount;
+  public String[] hash;
 }

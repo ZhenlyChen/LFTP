@@ -12,28 +12,47 @@ public class Server implements Runnable {
   int port;
 
 
-  @Option(names = {"-d", "--data"}, description = "Server data dir.")
-  String data;
+  @Option(names = {"-d", "--dir"}, description = "Server dir dir.")
+  String dir;
 
   @Override
   public void run() {
-    if (port <= 1024 || data == null) {
-      System.out.println("[ERROR] invalid port or data");
+    if (port <= 1024 || dir == null) {
+      System.out.println("[ERROR] invalid port or dir");
       return;
     }
-    File file = new File(data);
+    File file = new File(dir);
     if (!file.exists()) {
       if (!file.mkdir()) {
-        System.out.println("[ERROR] Can't make directory " + data + ".");
+        System.out.println("[ERROR] Can't make directory " + dir + ".");
         return;
       }
     } else if (!file.isDirectory()) {
-      System.out.println("[ERROR] File " + data + " has exist, can't create directory here.");
+      System.out.println("[ERROR] File " + dir + " has exist, can't create directory here.");
       return;
     }
-    System.out.println("[INFO] Data directory: " + data);
+    System.out.println("[INFO] Data directory: " + dir);
     NetUDP netUDP = new NetUDP(port);
     System.out.println("[INFO] Listening in localhost:" + port);
-    netUDP.listen();
+    netUDP.listen((packet, ack) -> {
+      String recStr = new String(packet.getData());
+      if (recStr.substring(0, 4).equals("LIST")) {
+        File[] fileList = file.listFiles();
+        if (fileList == null || fileList.length == 0) {
+          return ack;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (File f : fileList) {
+          if (f.isFile()) {
+            sb.append(f.getName());
+            sb.append("\n");
+          }
+        }
+        ack.setData(sb.toString().getBytes());
+      } else if (recStr.substring(0, 4).equals("SEND")) {
+        ack.setData("88".getBytes());
+      }
+      return ack;
+    });
   }
 }

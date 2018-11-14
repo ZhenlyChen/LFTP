@@ -69,7 +69,11 @@ public class NetUDP {
     }
   }
 
-  public void listen() {
+  public interface listenCallBack {
+    UDPPacket Receive(UDPPacket data, UDPPacket ack);
+  }
+
+  public void listen(listenCallBack callBack) {
     while (true) {
       UDPPacket data = UDPReceive();
       System.out.println("server received data from client：");
@@ -80,8 +84,9 @@ public class NetUDP {
         setTarget(data.getPacket().getAddress(), data.getPacket().getPort());
         UDPPacket ackPacket = new UDPPacket(seq++);
         ackPacket.setAck(data.getSeq());
+        UDPPacket sendPacket =  callBack.Receive(data, ackPacket);
         try {
-          UDPSend(ackPacket);
+          UDPSend(sendPacket);
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -109,7 +114,7 @@ public class NetUDP {
       while (true) {
         UDPSend(packet);
         UDPPacket rec = UDPReceive();
-        if (rec != null && rec.isValid() && rec.isACK() && rec.getAck() == packet.getSeq()) {
+        if (rec != null  && rec.isACK() && rec.getAck() == packet.getSeq()) {
           if (packet.getCallBack() != null) {
             packet.getCallBack().success(rec);
           }
