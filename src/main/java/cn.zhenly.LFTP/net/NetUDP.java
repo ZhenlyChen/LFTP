@@ -1,6 +1,4 @@
-package cn.zhenly.LFTP.NetUDP;
-
-import org.jetbrains.annotations.NotNull;
+package cn.zhenly.lftp.net;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -59,7 +57,7 @@ public class NetUDP {
     DatagramPacket p = new DatagramPacket(buf, 1024);
     try {
       socket.receive(p);
-      UDPPacket packet = UDPPacket.ReadByte(p.getData());
+      UDPPacket packet = (UDPPacket) Util.ReadByte(p.getData());
       if (packet != null) {
         packet.setPacket(p);
       }
@@ -84,7 +82,7 @@ public class NetUDP {
         setTarget(data.getPacket().getAddress(), data.getPacket().getPort());
         UDPPacket ackPacket = new UDPPacket(seq++);
         ackPacket.setAck(data.getSeq());
-        UDPPacket sendPacket =  callBack.Receive(data, ackPacket);
+        UDPPacket sendPacket = callBack.Receive(data, ackPacket);
         try {
           UDPSend(sendPacket);
         } catch (IOException e) {
@@ -114,7 +112,7 @@ public class NetUDP {
       while (true) {
         UDPSend(packet);
         UDPPacket rec = UDPReceive();
-        if (rec != null  && rec.isACK() && rec.getAck() == packet.getSeq()) {
+        if (rec != null && rec.isACK() && rec.getAck() == packet.getSeq()) {
           if (packet.getCallBack() != null) {
             packet.getCallBack().success(rec);
           }
@@ -131,8 +129,8 @@ public class NetUDP {
     this.running = false;
   }
 
-  private void UDPSend(@NotNull UDPPacket packetData) throws IOException {
-    byte[] data = packetData.getByte();
+  private void UDPSend(UDPPacket packetData) throws IOException {
+    byte[] data = Util.getByte(packetData);
     DatagramPacket packet = new DatagramPacket(data, data.length, this.targetIP, this.targetPort);
     socket.send(packet);
   }

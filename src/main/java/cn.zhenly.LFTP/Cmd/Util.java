@@ -1,17 +1,37 @@
-package cn.zhenly.LFTP.Cmd;
+package cn.zhenly.lftp.cmd;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class Util {
 
-  public static class AddressInfo {
+  static class AddressInfo {
     InetAddress ip;
     int port;
     boolean valid;
   }
 
-  public static AddressInfo parseIPAddr(String ipStr) {
+
+  private static void bindPort(String host, int port) throws Exception {
+    Socket s = new Socket();
+    s.bind(new InetSocketAddress(host, port));
+    s.close();
+  }
+
+  static boolean isPortAvailable(int port) {
+    Socket s = new Socket();
+    try {
+      bindPort("0.0.0.0", port);
+      bindPort(InetAddress.getLocalHost().getHostAddress(), port);
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  static AddressInfo parseIPAddr(String ipStr) {
     AddressInfo info = new AddressInfo();
     info.valid = false;
     String[] targetAddress = ipStr.split(":");

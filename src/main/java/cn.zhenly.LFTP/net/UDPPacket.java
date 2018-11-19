@@ -1,4 +1,4 @@
-package cn.zhenly.LFTP.NetUDP;
+package cn.zhenly.lftp.net;
 
 import java.io.*;
 import java.net.DatagramPacket;
@@ -31,27 +31,6 @@ public class UDPPacket implements Serializable {
 
   public UDPPacket(int seq) {
     this.seq = seq;
-  }
-
-  public byte[] getByte() {
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
-      out.writeObject(this);
-      out.flush();
-      return bos.toByteArray();
-    } catch (IOException e) {
-      System.out.println("Error: Can't convert the packet to string.");
-    }
-    return null;
-  }
-
-  public static UDPPacket ReadByte(byte[] data) {
-    try {
-      return (UDPPacket) (new ObjectInputStream(new ByteArrayInputStream(data))).readObject();
-    } catch (IOException | ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-    return null;
   }
 
   public DatagramPacket getPacket() {

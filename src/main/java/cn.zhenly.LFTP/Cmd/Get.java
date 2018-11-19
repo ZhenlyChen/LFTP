@@ -1,4 +1,4 @@
-package cn.zhenly.LFTP.Cmd;
+package cn.zhenly.lftp.cmd;
 
 import picocli.CommandLine.*;
 

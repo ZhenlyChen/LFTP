@@ -1,7 +1,7 @@
-package cn.zhenly.LFTP.Cmd;
+package cn.zhenly.lftp.cmd;
 
-import cn.zhenly.LFTP.NetUDP.NetUDP;
-import cn.zhenly.LFTP.NetUDP.UDPPacket;
+import cn.zhenly.lftp.net.NetUDP;
+import cn.zhenly.lftp.net.UDPPacket;
 import picocli.CommandLine.*;
 
 import java.io.IOException;
