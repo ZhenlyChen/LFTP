@@ -1,6 +1,6 @@
 package cn.zhenly.lftp.cmd;
 
-import cn.zhenly.lftp.net.NetUDP;
+import cn.zhenly.lftp.net.NetSocket;
 import cn.zhenly.lftp.net.UDPPacket;
 import picocli.CommandLine.*;
 
@@ -19,13 +19,13 @@ public class GetList implements Runnable {
     target = Util.parseIPAddr(server);
     if (!target.valid) return;
     try {
-      NetUDP netUDP;
-      netUDP = new NetUDP(9000, target.ip, target.port);
-      netUDP.send("LIST".getBytes(), (UDPPacket data) -> {
+      NetSocket netSocket;
+      netSocket = new NetSocket(9000, target.ip, target.port);
+      netSocket.send("LIST".getBytes(), (UDPPacket data) -> {
         System.out.println("File List:");
         System.out.println(new String(data.getData()));
       });
-      netUDP.close();
+      netSocket.close();
     } catch (IOException e) {
       e.printStackTrace();
     }

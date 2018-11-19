@@ -8,7 +8,7 @@ import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class NetUDP {
+public class NetSocket implements AutoCloseable {
   private int seq; // 包序号
   private int targetPort; // 目标端口
   private InetAddress targetIP; // 目标地址
@@ -16,12 +16,13 @@ public class NetUDP {
   private Queue<UDPPacket> bufferPackets; // 发送缓冲区
   private boolean running; // 是否在发送
   private int cwnd; // 窗口大小
+  private boolean isConnected;
 
-  public NetUDP(int port) {
+  public NetSocket(int port) {
     initSocket(port);
   }
 
-  public NetUDP(int port, InetAddress targetIP, int targetPort) {
+  public NetSocket(int port, InetAddress targetIP, int targetPort) {
     initSocket(port);
     setTarget(targetIP, targetPort);
   }
@@ -53,8 +54,8 @@ public class NetUDP {
   }
 
   private UDPPacket UDPReceive() {
-    byte[] buf = new byte[1024];
-    DatagramPacket p = new DatagramPacket(buf, 1024);
+    byte[] buf = new byte[1400];
+    DatagramPacket p = new DatagramPacket(buf, 1400);
     try {
       socket.receive(p);
       UDPPacket packet = (UDPPacket) Util.ReadByte(p.getData());
@@ -65,6 +66,11 @@ public class NetUDP {
     } catch (IOException e) {
       return null;
     }
+  }
+
+  @Override
+  public void close() {
+    socket.close();
   }
 
   public interface listenCallBack {
@@ -96,6 +102,10 @@ public class NetUDP {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setCallBack(callBack);
     packet.setData(content);
+    addPackToQueue(packet);
+  }
+
+  private void addPackToQueue(UDPPacket packet) throws IOException {
     this.bufferPackets.add(packet);
     if (!running) {
       run();
@@ -112,13 +122,13 @@ public class NetUDP {
       while (true) {
         UDPSend(packet);
         UDPPacket rec = UDPReceive();
-        if (rec != null && rec.isACK() && rec.getAck() == packet.getSeq()) {
+        if (rec != null && ((rec.isACK() && rec.getAck() == packet.getSeq()) || rec.isFIN())) {
           if (packet.getCallBack() != null) {
             packet.getCallBack().success(rec);
           }
           break;
         } else {
-          errorCount++;
+            errorCount++;
         }
         if (errorCount > 5) {
           System.out.println("[ERROR] System error.");
@@ -135,7 +145,12 @@ public class NetUDP {
     socket.send(packet);
   }
 
-  public void close() {
-    socket.close();
+  // 断开连接
+  public void disconnect(UDPPacket.ACKCallBack callBack) throws IOException {
+    UDPPacket packet = new UDPPacket(seq++);
+    packet.setFIN(true);
+    packet.setCallBack(callBack);
+    addPackToQueue(packet);
   }
+
 }

@@ -13,7 +13,6 @@ public class UDPPacket implements Serializable {
   private int seq; // 序列号
   private int ack; // 确认号
   private boolean ACK; // ACK标志位
-  private boolean SYN; // SYN标志位
   private boolean FIN; // FIN标志位
   private byte[] data; // 数据包
 
@@ -72,14 +71,6 @@ public class UDPPacket implements Serializable {
 
   public void setACK(boolean ACK) {
     this.ACK = ACK;
-  }
-
-  public boolean isSYN() {
-    return SYN;
-  }
-
-  public void setSYN(boolean SYN) {
-    this.SYN = SYN;
   }
 
   public boolean isFIN() {

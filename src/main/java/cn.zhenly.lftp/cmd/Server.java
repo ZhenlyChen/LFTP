@@ -1,6 +1,6 @@
 package cn.zhenly.lftp.cmd;
 
-import cn.zhenly.lftp.net.NetUDP;
+import cn.zhenly.lftp.net.NetSocket;
 import picocli.CommandLine.*;
 
 import java.io.File;
@@ -9,18 +9,20 @@ import java.io.File;
 public class Server implements Runnable {
 
   @Option(names = {"-p", "--port"}, description = "Server listen port.", defaultValue = "3000")
-  int port;
+  private int port;
 
   @Option(names = {"-s", "--start"}, description = "Start port pool", defaultValue = "20480")
-  int portPoolStart;
+  private int portPoolStart;
 
   @Option(names = {"-c", "--client"}, description = "The number of clients at the same time.", defaultValue = "10")
-  int clientCount;
+  private int clientCount;
 
   @Option(names = {"-d", "--dir"}, description = "Server dir dir.")
-  String dir;
+  private String dir;
 
-  boolean usedPort[];
+  private boolean usedPort[];
+
+  
 
   @Override
   public void run() {
@@ -51,9 +53,9 @@ public class Server implements Runnable {
       return;
     }
     System.out.println("[INFO] Data directory: " + dir);
-    NetUDP netUDP = new NetUDP(port);
+    NetSocket netSocket = new NetSocket(port);
     System.out.println("[INFO] Listening in localhost:" + port);
-    netUDP.listen((packet, ack) -> {
+    netSocket.listen((packet, ack) -> {
       String recStr = new String(packet.getData());
       switch (recStr.substring(0, 4)) {
         case "LIST":
@@ -71,14 +73,31 @@ public class Server implements Runnable {
           ack.setData(sb.toString().getBytes());
           break;
         case "SEND":
-          // TODO 从端口池中新开端口，等待客户端连接
-          ack.setData("88".getBytes());
+          // 从端口池中新开端口，等待客户端连接
+          for (int i = 0; i < usedPort.length; i++) {
+            if (!usedPort[i]) {
+              int sendPort = portPoolStart + i;
+              ack.setData(("PORT" + sendPort).getBytes());
+              listenSend(sendPort);
+              break;
+            }
+          }
           break;
         case "GET":
           // TODO 从端口池中新开端口，等待客户端连接
           ack.setData("66".getBytes());
           break;
       }
+      return ack;
+    });
+  }
+
+  // 监听发送文件事件
+  private void listenSend(int sendPort) {
+    NetSocket netSocket = new NetSocket(sendPort);
+    netSocket.setTimeOut(10000);
+    netSocket.listen((data, ack) -> {
+
       return ack;
     });
   }
