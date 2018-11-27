@@ -22,7 +22,7 @@ public class Server implements Runnable {
 
   private boolean usedPort[];
 
-  
+
 
   @Override
   public void run() {
@@ -78,7 +78,12 @@ public class Server implements Runnable {
             if (!usedPort[i]) {
               int sendPort = portPoolStart + i;
               ack.setData(("PORT" + sendPort).getBytes());
-              listenSend(sendPort);
+              int finalI = i;
+              ServerRecvFile serverRecvFile = new ServerRecvFile(sendPort, dir, ()-> {
+                usedPort[finalI] = false;
+              });
+              serverRecvFile.start();
+              usedPort[i] = true;
               break;
             }
           }
@@ -92,14 +97,5 @@ public class Server implements Runnable {
     });
   }
 
-  // 监听发送文件事件
-  private void listenSend(int sendPort) {
-    NetSocket netSocket = new NetSocket(sendPort);
-    netSocket.setTimeOut(10000);
-    netSocket.listen((data, ack) -> {
-
-      return ack;
-    });
-  }
 
 }

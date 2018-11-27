@@ -1,16 +1,21 @@
 package cn.zhenly.lftp.cmd;
 
+import cn.zhenly.lftp.net.FileChunk;
 import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import static cn.zhenly.lftp.cmd.Util.showPercentage;
+import static cn.zhenly.lftp.net.Util.getByte;
 
 
 @Command(name = "lsend", mixinStandardHelpOptions = true, description = "Send file to server.")
@@ -64,6 +69,7 @@ public class Send implements Runnable {
         } catch (NumberFormatException e) {
           e.printStackTrace();
         }
+        System.out.println("[INFO] Get send port: " + port);
         sendFile(file, port);
       });
     } catch (Exception e) {
@@ -77,20 +83,54 @@ public class Send implements Runnable {
       NetSocket netSocket;
       netSocket = new NetSocket(sendPort, target.ip, port);
       InputStream inStream = new FileInputStream(file);
+      List<byte[]> buffs = new ArrayList<>();
       byte[] buf = new byte[1024];
-      int fileID = 0;
+      // 分割文件
       while (inStream.read(buf) != -1) {
-        System.out.println("Data:");
-        System.out.println(new String(buf));
-        netSocket.send("SEND".getBytes(), data -> {
-          String str = new String(data.getData());
-          netSocket.close();
-        });
-        fileID++;
+        buffs.add(buf.clone());
       }
+      boolean[] finishChunk = new boolean[buffs.size()];
+      FileChunk initChunk = new FileChunk(file.getName(), -1, buffs.size(), new byte[1024]);
+      netSocket.send(getByte(initChunk), data-> {
+        System.out.println("[INFO] Start to send file " + file.getName() + " (" + file.length() / 1024.0 + "KB)");
+        if (new String(data.getData()).equals("OK")) {
+          for (int i = 0; i < buffs.size(); i++) {
+            FileChunk fileChunk = new FileChunk(file.getName(), i, buffs.size(), buffs.get(i));
+            try {
+              netSocket.send(getByte(fileChunk), d -> {
+                int id = Integer.parseInt(new String(d.getData()));
+                if (id >= 0 && id < buffs.size()) {
+                  showPercentage((float)(id+1) / buffs.size(), file.length());
+                  finishChunk[id] = true;
+                  if (isFinishChunk(finishChunk, buffs.size())) {
+                    try {
+                      netSocket.disconnect(null);
+                    } catch (IOException e) {
+                      e.printStackTrace();
+                    }
+                  }
+                }
+              });
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          }
+        } else {
+          System.out.println("[ERROR] Can't connect to server");
+        }
+      });
     } catch (IOException e) {
       System.out.printf("[ERROR] Can't read file: %s%n", file.getName());
     }
   }
+
+
+  private boolean isFinishChunk(boolean[] finishChunk, int size) {
+    for (int i = 0; i < size; i++) {
+      if (!finishChunk[i]) return false;
+    }
+    return true;
+  }
 }
+
 

@@ -80,22 +80,30 @@ public class NetSocket implements AutoCloseable {
   public void listen(listenCallBack callBack) {
     while (true) {
       UDPPacket data = UDPReceive();
-      System.out.println("server received data from client：");
       if (data != null) {
-        System.out.println(data.getPacket().getAddress().getHostAddress() + ":" + data.getPacket().getPort());
-        System.out.println(new String(data.getData()));
-        System.out.println(data.getSeq());
+        // System.out.println("[DEBUG] Receive from " + data.getPacket().getAddress().getHostAddress() + ":" + data.getPacket().getPort());
         setTarget(data.getPacket().getAddress(), data.getPacket().getPort());
         UDPPacket ackPacket = new UDPPacket(seq++);
         ackPacket.setAck(data.getSeq());
-        UDPPacket sendPacket = callBack.Receive(data, ackPacket);
+        if (data.isFIN()) {
+          ackPacket.setFIN(true);
+          break;
+        } else {
+          ackPacket = callBack.Receive(data, ackPacket);
+        }
         try {
-          UDPSend(sendPacket);
+          UDPSend(ackPacket);
         } catch (IOException e) {
           e.printStackTrace();
         }
+      } else {
+        System.out.println("TimeOut!");
+        return;
       }
     }
+    System.out.println("Finish!");
+    System.out.println("Port " + socket.getLocalPort() + " Closed.");
+    // callBack.Receive(null, null);
   }
 
   public void send(byte[] content, UDPPacket.ACKCallBack callBack) throws IOException {
@@ -121,6 +129,7 @@ public class NetSocket implements AutoCloseable {
       int errorCount = 0;
       while (true) {
         UDPSend(packet);
+        if (packet.isFIN()) break;
         UDPPacket rec = UDPReceive();
         if (rec != null && ((rec.isACK() && rec.getAck() == packet.getSeq()) || rec.isFIN())) {
           if (packet.getCallBack() != null) {
@@ -128,7 +137,7 @@ public class NetSocket implements AutoCloseable {
           }
           break;
         } else {
-            errorCount++;
+          errorCount++;
         }
         if (errorCount > 5) {
           System.out.println("[ERROR] System error.");

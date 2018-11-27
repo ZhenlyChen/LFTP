@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-class Util {
+public class Util {
 
-  static <T> byte[] getByte(T obj) {
+  public static <T> byte[] getByte(T obj) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
       out.writeObject(obj);
@@ -20,7 +20,7 @@ class Util {
     return null;
   }
 
-  static Object ReadByte(byte[] data) {
+  public static Object ReadByte(byte[] data) {
     try {
       return (new ObjectInputStream(new ByteArrayInputStream(data))).readObject();
     } catch (IOException | ClassNotFoundException e) {

@@ -19,7 +19,7 @@ public class FileData {
   }
 
   public boolean addChunk(FileChunk chunk) {
-    if (chunk.getId() >= totalCount || chunk.getId() < 0 || chunks[chunk.getId()].isValid()) return false;
+    if (chunk.getId() >= totalCount || chunk.getId() < 0 || chunks[chunk.getId()] != null) return false;
     chunk.setValid(true);
     chunks[chunk.getId()] = chunk;
     validCount++;

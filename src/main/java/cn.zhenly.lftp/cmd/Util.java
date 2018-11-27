@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Date;
 
 public class Util {
 
@@ -11,6 +12,27 @@ public class Util {
     InetAddress ip;
     int port;
     boolean valid;
+  }
+  static long lastTime;
+
+  static void showPercentage(float percentage, long fileSize) {
+    int percentageInt = Math.round(percentage * 100);
+    System.out.print('\r');
+    StringBuilder sb = new StringBuilder();
+    for (int j = 0; j < 100; j++) sb.append(j < percentageInt ? "=" : (percentageInt == j ? ">" : " "));
+    System.out.print(sb.toString() + "\t" + percentage * 100 + "%");
+    if (lastTime == 0) {
+      lastTime = (new Date()).getTime();
+    }
+    long now = (new Date()).getTime();
+    double speed = ((fileSize / 1024.0)  * percentage) / ((now - lastTime + 1) / 1000.0);
+    double time = (now - lastTime + 1) / 1000.0;
+    System.out.print("   Speed: " + (double)(Math.round(speed*100))/100 + "KB/s   ");
+    System.out.print("   Time: " +  (double)(Math.round(time*100))/100+ "s");
+  }
+
+  static void resetPercentage() {
+    lastTime = 0;
   }
 
 
