@@ -15,17 +15,15 @@ public class ByteConverter {
       out.flush();
       return bos.toByteArray();
     } catch (IOException e) {
-      System.out.println("Error: Can't convert the packet to string.");
+      return null;
     }
-    return null;
   }
 
   public static Object ReadByte(byte[] data) {
     try {
       return (new ObjectInputStream(new ByteArrayInputStream(data))).readObject();
     } catch (IOException | ClassNotFoundException e) {
-      System.out.println("Error: Can't convert the data to packet.");
+      return null;
     }
-    return null;
   }
 }

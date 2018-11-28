@@ -7,6 +7,7 @@ import cn.zhenly.lftp.service.SendThread;
 import picocli.CommandLine.*;
 
 import java.io.File;
+import java.io.IOException;
 
 import static cn.zhenly.lftp.cmd.CmdParameter.isPortAvailable;
 

@@ -69,13 +69,13 @@ public class NetSocket implements AutoCloseable {
     this.listening = new AtomicBoolean(false);
     this.ack = 0;
     this.seq = 0;
+    this.cwnd = 1;
     this.bufferPackets = new LinkedList<>();
     try {
       channel = DatagramChannel.open();
-      channel.configureBlocking(true);
+      channel.configureBlocking(false);
       this.socket = channel.socket();
       socket.bind(new InetSocketAddress(port));
-      channel.configureBlocking(false);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -91,6 +91,7 @@ public class NetSocket implements AutoCloseable {
   }
 
   public void listen(listenCallBack callBack) {
+    setBlocking(true);
     while (true) {
       UDPPacket data = UDPReceive();
       if (data != null) {
@@ -107,14 +108,10 @@ public class NetSocket implements AutoCloseable {
         } catch (IOException e) {
           e.printStackTrace();
         }
-      } else {
-        System.out.println("TimeOut!");
-        return;
       }
     }
     System.out.println("Finish!");
     System.out.println("Port " + socket.getLocalPort() + " Closed.");
-    // callBack.Receive(null, null);
   }
 
 
@@ -127,24 +124,37 @@ public class NetSocket implements AutoCloseable {
 
   private void addPackToQueue(UDPPacket packet) throws IOException {
     this.bufferPackets.add(packet);
-//    if (listening.compareAndSet(false, true)) {
-//      (new Thread(this::listenACK)).start();
-//    }
-//    if (running.compareAndSet(false, true)) {
-//      (new Thread(this::sendBuff)).start();
-//    }
-    if (running.compareAndSet(false, true)) {
-      run();
+    if (listening.compareAndSet(false, true)) {
+      (new Thread(this::listenACK)).start();
     }
+    if (running.compareAndSet(false, true)) {
+      (new Thread(this::sendBuff)).start();
+    }
+//    if (running.compareAndSet(false, true)) {
+//      run();
+//    }
   }
 
   private void listenACK() {
+    setBlocking(true);
     while (true) {
       UDPPacket rec = UDPReceive();
+
+
     }
   }
 
   private void sendBuff() {
+
+  }
+
+  private void setBlocking(boolean blocking) {
+    try {
+      channel.configureBlocking(true);
+    } catch (IOException e) {
+      System.out.println("Can't set Blocking");
+      e.printStackTrace();
+    }
 
   }
 

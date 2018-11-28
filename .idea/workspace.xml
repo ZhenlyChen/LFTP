@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="bedc04c7-1e8d-482a-b390-e2eeeea7c15b" name="Default Changelist" comment="" />
+    <list default="true" id="bedc04c7-1e8d-482a-b390-e2eeeea7c15b" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/.gradle/" />
     <ignored path="$PROJECT_DIR$/build/" />
@@ -48,8 +50,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/ByteConverter.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="572">
-              <caret line="26" column="69" selection-start-line="26" selection-start-column="69" selection-end-line="26" selection-end-column="69" />
+            <state relative-caret-position="338">
+              <caret line="17" column="17" selection-start-line="17" selection-start-column="13" selection-end-line="17" selection-end-column="17" />
             </state>
           </provider>
         </entry>
@@ -69,8 +71,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/FileNet.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="361">
-              <caret line="55" column="50" lean-forward="true" selection-start-line="55" selection-start-column="50" selection-end-line="55" selection-end-column="50" />
+            <state relative-caret-position="269">
+              <caret line="19" column="17" selection-start-line="19" selection-start-column="17" selection-end-line="19" selection-end-column="17" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -81,8 +83,23 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/ReceiveThread.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="567">
-              <caret line="30" column="13" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="13" />
+            <state relative-caret-position="359">
+              <caret line="28" column="5" lean-forward="true" selection-start-line="28" selection-start-column="5" selection-end-line="28" selection-end-column="5" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Get.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="905">
+              <caret line="45" column="24" selection-start-line="45" selection-start-column="24" selection-end-line="45" selection-end-column="24" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -99,8 +116,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Server.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="354">
-              <caret line="77" column="59" selection-start-line="77" selection-start-column="46" selection-end-line="77" selection-end-column="59" />
+            <state relative-caret-position="1069">
+              <caret line="107" column="6" selection-start-line="107" selection-start-column="6" selection-end-line="107" selection-end-column="26" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -111,12 +128,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/NetSocket.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1412">
-              <caret line="207" selection-start-line="207" selection-end-line="207" />
+            <state relative-caret-position="270">
+              <caret line="92" column="20" selection-start-line="92" selection-start-column="14" selection-end-line="92" selection-end-column="20" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#2402#2403#0" expanded="true" />
-                <marker date="1543424810641" expanded="true" signature="2084:2275" ph="..." />
+                <element signature="e#2382#2383#0" expanded="true" />
+                <marker date="1543425622472" expanded="true" signature="2103:2255" ph="..." />
               </folding>
             </state>
           </provider>
@@ -151,6 +168,7 @@
       <find>server received data from client：</find>
       <find>setTarget</find>
       <find>System error.</find>
+      <find>configureBlocking</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -200,16 +218,16 @@
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/AddressInfo.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/GetList.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/CmdParameter.java" />
-        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Server.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/Util.java" />
-        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/FileNet.java" />
-        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/ReceiveThread.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/SendThread.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Get.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Send.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/UDPPacket.java" />
-        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/NetSocket.java" />
         <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/ByteConverter.java" />
+        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Server.java" />
+        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/FileNet.java" />
+        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/ReceiveThread.java" />
+        <option value="$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/NetSocket.java" />
       </list>
     </option>
   </component>
@@ -379,7 +397,7 @@
     <property name="Repository.Attach.Sources" value="false" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
-    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1543424915943" />
+    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1543425683016" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
@@ -467,12 +485,12 @@
       <workItem from="1543329472079" duration="15000" />
       <workItem from="1543329635161" duration="66000" />
       <workItem from="1543329744224" duration="8429000" />
-      <workItem from="1543388334439" duration="29816000" />
+      <workItem from="1543388334439" duration="30510000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="38575000" />
+    <option name="totallyTimeSpent" value="39269000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -485,6 +503,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.116204694" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -663,16 +682,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Get.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="448">
-          <caret line="42" column="71" lean-forward="true" selection-start-line="42" selection-start-column="71" selection-end-line="42" selection-end-column="71" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/SendThread.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="240">
@@ -744,26 +753,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/FileNet.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="361">
-          <caret line="55" column="50" lean-forward="true" selection-start-line="55" selection-start-column="50" selection-end-line="55" selection-end-column="50" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Send.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="385">
-          <caret line="39" column="17" selection-start-line="39" selection-start-column="17" selection-end-line="39" selection-end-column="17" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://D:/ProgramFiles/Work/jdk/lib/src.zip!/java.base/java/net/DatagramSocket.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="533">
@@ -795,15 +784,55 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/ByteConverter.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="26" column="69" selection-start-line="26" selection-start-column="69" selection-end-line="26" selection-end-column="69" />
+        <state relative-caret-position="338">
+          <caret line="17" column="17" selection-start-line="17" selection-start-column="13" selection-end-line="17" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Send.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="385">
+          <caret line="39" column="17" selection-start-line="39" selection-start-column="17" selection-end-line="39" selection-end-column="17" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Server.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="354">
-          <caret line="77" column="59" selection-start-line="77" selection-start-column="46" selection-end-line="77" selection-end-column="59" />
+        <state relative-caret-position="1069">
+          <caret line="107" column="6" selection-start-line="107" selection-start-column="6" selection-end-line="107" selection-end-column="26" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/FileNet.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="269">
+          <caret line="19" column="17" selection-start-line="19" selection-start-column="17" selection-end-line="19" selection-end-column="17" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/ReceiveThread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="359">
+          <caret line="28" column="5" lean-forward="true" selection-start-line="28" selection-start-column="5" selection-end-line="28" selection-end-column="5" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/cmd/Get.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="905">
+          <caret line="45" column="24" selection-start-line="45" selection-start-column="24" selection-end-line="45" selection-end-column="24" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
@@ -817,21 +846,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/service/ReceiveThread.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="567">
-          <caret line="30" column="13" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/cn.zhenly.lftp/net/NetSocket.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1412">
-          <caret line="207" selection-start-line="207" selection-end-line="207" />
+        <state relative-caret-position="270">
+          <caret line="92" column="20" selection-start-line="92" selection-start-column="14" selection-end-line="92" selection-end-column="20" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#2402#2403#0" expanded="true" />
-            <marker date="1543424810641" expanded="true" signature="2084:2275" ph="..." />
+            <element signature="e#2382#2383#0" expanded="true" />
+            <marker date="1543425622472" expanded="true" signature="2103:2255" ph="..." />
           </folding>
         </state>
       </provider>
