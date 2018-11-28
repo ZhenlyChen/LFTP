@@ -1,9 +1,14 @@
 package cn.zhenly.lftp.cmd;
 
 import cn.zhenly.lftp.net.NetSocket;
+import cn.zhenly.lftp.service.FileIO;
+import cn.zhenly.lftp.service.ReceiveThread;
+import cn.zhenly.lftp.service.SendThread;
 import picocli.CommandLine.*;
 
 import java.io.File;
+
+import static cn.zhenly.lftp.cmd.CmdParameter.isPortAvailable;
 
 @Command(name = "server", mixinStandardHelpOptions = true, description = "Send and receive big file by udp.")
 public class Server implements Runnable {
@@ -20,8 +25,7 @@ public class Server implements Runnable {
   @Option(names = {"-d", "--dir"}, description = "Server dir dir.")
   private String dir;
 
-  private boolean usedPort[];
-
+  private boolean[] usedPort;
 
 
   @Override
@@ -31,7 +35,7 @@ public class Server implements Runnable {
       return;
     }
     for (int i = portPoolStart; i < portPoolStart + clientCount; i++) {
-      if (!Util.isPortAvailable(i)) {
+      if (!isPortAvailable(i)) {
         System.out.println("[ERROR] Port " + i + " is using.");
         return;
       }
@@ -42,17 +46,8 @@ public class Server implements Runnable {
     for (int i = 0; i < clientCount; i++) {
       this.usedPort[i] = false;
     }
-    File file = new File(dir);
-    if (!file.exists()) {
-      if (!file.mkdir()) {
-        System.out.println("[ERROR] Can't make directory " + dir + ".");
-        return;
-      }
-    } else if (!file.isDirectory()) {
-      System.out.println("[ERROR] File " + dir + " has exist, can't create directory here.");
-      return;
-    }
-    System.out.println("[INFO] Data directory: " + dir);
+    File file = FileIO.getDir(dir);
+    if (file == null) return;
     NetSocket netSocket = new NetSocket(port);
     System.out.println("[INFO] Listening in localhost:" + port);
     netSocket.listen((packet, ack) -> {
@@ -74,28 +69,48 @@ public class Server implements Runnable {
           break;
         case "SEND":
           // 从端口池中新开端口，等待客户端连接
-          for (int i = 0; i < usedPort.length; i++) {
-            if (!usedPort[i]) {
-              int sendPort = portPoolStart + i;
-              ack.setData(("PORT" + sendPort).getBytes());
-              int finalI = i;
-              ServerRecvFile serverRecvFile = new ServerRecvFile(sendPort, dir, ()-> {
-                usedPort[finalI] = false;
-              });
-              serverRecvFile.start();
-              usedPort[i] = true;
-              break;
-            }
+          int sendPortIndex = getFreePortIndex();
+          if (sendPortIndex == -1) {
+            ack.setData("BUSY".getBytes());
+          } else {
+            int sendPort = portPoolStart + sendPortIndex;
+            ack.setData(("PORT" + sendPort).getBytes());
+            ReceiveThread receiveThread = new ReceiveThread(sendPort, dir, () -> usedPort[sendPortIndex] = false);
+            receiveThread.start();
+            usedPort[sendPortIndex] = true;
           }
           break;
-        case "GET":
-          // TODO 从端口池中新开端口，等待客户端连接
-          ack.setData("66".getBytes());
+        case "GETS":
+          // 从端口池中新开端口，等待客户端连接
+          int getPortIndex = getFreePortIndex();
+          if (getPortIndex == -1) {
+            ack.setData("BUSY".getBytes());
+          } else {
+            int getPort = portPoolStart + getPortIndex;
+            ack.setData(("PORT" + getPort).getBytes());
+            String getFilePath = dir + "./" + recStr.substring(4);
+            File fileOfSend = new File(getFilePath);
+            if (!fileOfSend.exists() || !fileOfSend.isFile()) {
+              System.out.printf("[ERROR] %s is not a file.%n", getFilePath);
+            }
+            SendThread receiveThread =
+                    new SendThread(getPort, fileOfSend, netSocket.getTarget(), () -> usedPort[getPortIndex] = false);
+            receiveThread.start();
+            usedPort[getPortIndex] = true;
+          }
           break;
       }
       return ack;
     });
   }
 
+  private int getFreePortIndex() {
+    for (int i = 0; i < usedPort.length; i++) {
+      if (!usedPort[i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
 
 }

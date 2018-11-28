@@ -9,6 +9,7 @@ public class UDPPacket implements Serializable {
   private static final transient String DEFAULT_ENCODING = "UTF-8";
   private transient ACKCallBack callBack;
   private transient DatagramPacket packet;
+  private transient long time;
   private int winSize; // 窗口大小 (拥塞控制)
   private int seq; // 序列号
   private int ack; // 确认号
@@ -22,6 +23,14 @@ public class UDPPacket implements Serializable {
 
   public void setCallBack(ACKCallBack callBack) {
     this.callBack = callBack;
+  }
+
+  public long getTime() {
+    return time;
+  }
+
+  public void setTime(long time) {
+    this.time = time;
   }
 
   public interface ACKCallBack {

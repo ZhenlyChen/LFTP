@@ -1,5 +1,6 @@
 package cn.zhenly.lftp.cmd;
 
+import cn.zhenly.lftp.net.AddressInfo;
 import cn.zhenly.lftp.net.NetSocket;
 import cn.zhenly.lftp.net.UDPPacket;
 import picocli.CommandLine.*;
@@ -12,11 +13,11 @@ public class GetList implements Runnable {
   @Option(names = {"-s", "--server"}, description = "Server location.")
   String server;
 
-  private Util.AddressInfo target;
+  private AddressInfo target;
 
   @Override
   public void run() {
-    target = Util.parseIPAddr(server);
+    target = CmdParameter.parseIPAddr(server);
     if (!target.valid) return;
     try {
       NetSocket netSocket;
@@ -24,8 +25,8 @@ public class GetList implements Runnable {
       netSocket.send("LIST".getBytes(), (UDPPacket data) -> {
         System.out.println("File List:");
         System.out.println(new String(data.getData()));
+        netSocket.close();
       });
-      netSocket.close();
     } catch (IOException e) {
       e.printStackTrace();
     }

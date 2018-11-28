@@ -1,31 +1,27 @@
 package cn.zhenly.lftp.net;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
 public class Util {
-
-  public static <T> byte[] getByte(T obj) {
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
-      out.writeObject(obj);
-      out.flush();
-      return bos.toByteArray();
-    } catch (IOException e) {
-      System.out.println("Error: Can't convert the packet to string.");
+  public static int getPortFromData(byte[] data) {
+    String str = new String(data);
+    if (str.substring(0, 4).equals("BUYS")) {
+      System.out.println("[ERROR] Server is buys now");
+      return -1;
     }
-    return null;
-  }
-
-  public static Object ReadByte(byte[] data) {
+    if (!str.substring(0, 4).equals("PORT")) {
+      System.out.println("[ERROR] System error!");
+      return -1;
+    }
+    int port = -1;
     try {
-      return (new ObjectInputStream(new ByteArrayInputStream(data))).readObject();
-    } catch (IOException | ClassNotFoundException e) {
+      port = Integer.parseInt(str.substring(4));
+    } catch (NumberFormatException e) {
       e.printStackTrace();
     }
-    return null;
+    if (port == -1) {
+      System.out.println("[INFO] Can't get port from " + str);
+    } else {
+      System.out.println("[INFO] Get send port: " + port);
+    }
+    return port;
   }
 }
