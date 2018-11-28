@@ -4,34 +4,34 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NetSocket implements AutoCloseable {
   private int seq; // 包序号
   private int targetPort; // 目标端口
-  private int selfPort;
   private InetAddress targetIP; // 目标地址
   private DatagramSocket socket;
+  private DatagramChannel channel;
   private Queue<UDPPacket> bufferPackets; // 发送缓冲区
-  private boolean running; // 是否在发送
+  private ReadWriteLock rwlock = new ReentrantReadWriteLock(); // 缓冲区读写锁
+  private AtomicBoolean running; // 是否在发送
+  private AtomicBoolean listening; // 是否在发送
   private int cwnd; // 窗口大小
   private int ssthresh; // 阈值
   private long estimateRTT; // 往返时间
   private long devRTT;
   private long timeoutInterval;
   private boolean slowMode; // 慢启动模式
-  private Selector selector;
-  DatagramChannel socketChannel;
+  private int ack;
   private InetSocketAddress socketAddress;
+
 
   public NetSocket(int port) {
     initSocket(port);
-    selfPort = port;
     estimateRTT = 0;
   }
 
@@ -65,36 +65,19 @@ public class NetSocket implements AutoCloseable {
 
   // 初始化自身socket
   private void initSocket(int port) {
-    this.running = false;
+    this.running = new AtomicBoolean(false);
+    this.listening = new AtomicBoolean(false);
+    this.ack = 0;
     this.seq = 0;
     this.bufferPackets = new LinkedList<>();
     try {
-      socket = new DatagramSocket(port);
-//      socketChannel = DatagramChannel.open();
-//      socketChannel.configureBlocking(false); // 非阻塞
-//      this.socket = socketChannel.socket();
-//      socket.bind(new InetSocketAddress(port));
-//      selector = Selector.open();
-//      socketChannel.register(selector, SelectionKey.OP_READ);
+      channel = DatagramChannel.open();
+      channel.configureBlocking(true);
+      this.socket = channel.socket();
+      socket.bind(new InetSocketAddress(port));
+      channel.configureBlocking(false);
     } catch (IOException e) {
       e.printStackTrace();
-    }
-  }
-
-  private UDPPacket UDPReceive() {
-    byte[] buf = new byte[1400];
-    // ByteBuffer byteBuffer = ByteBuffer.allocate(1400);
-    DatagramPacket p = new DatagramPacket(buf, 1400);
-    try {
-      // socketChannel.send(byteBuffer, socketAddress);
-      socket.receive(p);
-      UDPPacket packet = (UDPPacket) ByteConverter.ReadByte(p.getData());
-      if (packet != null) {
-        packet.setPacket(p);
-      }
-      return packet;
-    } catch (IOException e) {
-      return null;
     }
   }
 
@@ -111,8 +94,6 @@ public class NetSocket implements AutoCloseable {
     while (true) {
       UDPPacket data = UDPReceive();
       if (data != null) {
-        // System.out.println("[DEBUG] Receive from " + data.getPacket().getAddress().getHostAddress() + ":" + data.getPacket().getPort());
-        setTarget(data.getPacket().getAddress(), data.getPacket().getPort());
         UDPPacket ackPacket = new UDPPacket(seq++);
         ackPacket.setAck(data.getSeq());
         if (data.isFIN()) {
@@ -122,7 +103,7 @@ public class NetSocket implements AutoCloseable {
           ackPacket = callBack.Receive(data, ackPacket);
         }
         try {
-          UDPSend(ackPacket);
+          UDPSend(ackPacket, data.getFrom());
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -146,14 +127,29 @@ public class NetSocket implements AutoCloseable {
 
   private void addPackToQueue(UDPPacket packet) throws IOException {
     this.bufferPackets.add(packet);
-    if (!running) {
+//    if (listening.compareAndSet(false, true)) {
+//      (new Thread(this::listenACK)).start();
+//    }
+//    if (running.compareAndSet(false, true)) {
+//      (new Thread(this::sendBuff)).start();
+//    }
+    if (running.compareAndSet(false, true)) {
       run();
     }
   }
 
+  private void listenACK() {
+    while (true) {
+      UDPPacket rec = UDPReceive();
+    }
+  }
+
+  private void sendBuff() {
+
+  }
+
   // 发送数据
   private void run() throws IOException {
-    this.running = true;
     socket.setSoTimeout(2000);
     // (new Thread(this::listenACK)).start();
     while (bufferPackets.size() > 0) {
@@ -166,7 +162,7 @@ public class NetSocket implements AutoCloseable {
       int errorCount = 0;
       while (true) {
         packet.setTime(System.nanoTime());
-        UDPSend(packet);
+        UDPSend(packet, null);
         if (packet.isFIN()) break;
         UDPPacket rec = UDPReceive();
         if (rec != null && ((rec.isACK() && rec.getAck() == packet.getSeq()) || rec.isFIN())) {
@@ -186,7 +182,7 @@ public class NetSocket implements AutoCloseable {
         }
       }
     }
-    this.running = false;
+    running.set(false);
   }
 
   private void updateRRT(long rtt) {
@@ -199,13 +195,29 @@ public class NetSocket implements AutoCloseable {
     this.timeoutInterval = this.estimateRTT + 4 * this.devRTT;
   }
 
-  private void UDPSend(UDPPacket packetData) throws IOException {
+  private void UDPSend(UDPPacket packetData, InetSocketAddress to) throws IOException {
     byte[] data = ByteConverter.getByte(packetData);
     if (data == null) throw new IOException();
-    DatagramPacket packet = new DatagramPacket(data, data.length, this.targetIP, this.targetPort);
-    socket.send(packet);
-    // ByteBuffer buffer = ByteBuffer.wrap(data);
-    // socketChannel.send(buffer, new InetSocketAddress(targetIP, targetPort));
+    ByteBuffer buffer = ByteBuffer.wrap(data);
+    if (to == null) {
+      channel.send(buffer, socketAddress);
+    } else {
+      channel.send(buffer, to);
+    }
+  }
+
+  private UDPPacket UDPReceive() {
+    ByteBuffer byteBuffer = ByteBuffer.allocate(1400);
+    try {
+      InetSocketAddress socketAddress = (InetSocketAddress) channel.receive(byteBuffer);
+      UDPPacket packet = (UDPPacket) ByteConverter.ReadByte(byteBuffer.array());
+      if (packet != null) {
+        packet.setFrom(socketAddress);
+      }
+      return packet;
+    } catch (IOException e) {
+      return null;
+    }
   }
 
   // 断开连接

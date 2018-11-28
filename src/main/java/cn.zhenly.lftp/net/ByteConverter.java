@@ -24,7 +24,7 @@ public class ByteConverter {
     try {
       return (new ObjectInputStream(new ByteArrayInputStream(data))).readObject();
     } catch (IOException | ClassNotFoundException e) {
-      e.printStackTrace();
+      System.out.println("Error: Can't convert the data to packet.");
     }
     return null;
   }
