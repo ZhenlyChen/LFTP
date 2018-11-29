@@ -5,30 +5,27 @@ import cn.zhenly.lftp.net.NetSocket;
 import cn.zhenly.lftp.net.UDPPacket;
 import picocli.CommandLine.*;
 
-import java.io.IOException;
+import java.net.InetSocketAddress;
+
 
 @Command(name = "list", mixinStandardHelpOptions = true, description = "list files in server.")
 public class GetList implements Runnable {
 
   @Option(names = {"-s", "--server"}, description = "Server location.")
-  String server;
-
-  private AddressInfo target;
+  private String server;
 
   @Override
   public void run() {
-    target = CmdParameter.parseIPAddr(server);
+    AddressInfo target = CmdParameter.parseIPAddr(server);
     if (!target.valid) return;
-    try {
-      NetSocket netSocket;
-      netSocket = new NetSocket(9000, target.ip, target.port);
-      netSocket.send("LIST".getBytes(), (UDPPacket data) -> {
-        System.out.println("File List:");
-        System.out.println(new String(data.getData()));
-        netSocket.close();
-      });
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    NetSocket netSocket;
+    netSocket = new NetSocket(9000, new InetSocketAddress(target.ip, target.port), true);
+    netSocket.send("LIST".getBytes(), (UDPPacket data) -> {
+      System.out.println("Server file list:");
+      System.out.println("-----------------------");
+      System.out.println(new String(data.getData()));
+      System.out.println("-----------------------");
+      netSocket.close();
+    }, true);
   }
 }

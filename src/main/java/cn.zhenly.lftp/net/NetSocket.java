@@ -5,77 +5,55 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NetSocket implements AutoCloseable {
   private int seq; // 包序号
-  private int targetPort; // 目标端口
-  private InetAddress targetIP; // 目标地址
   private DatagramSocket socket;
   private DatagramChannel channel;
-  private Queue<UDPPacket> bufferPackets; // 发送缓冲区
-  private ReadWriteLock rwlock = new ReentrantReadWriteLock(); // 缓冲区读写锁
+  private LinkedList<UDPPacket> bufferPackets; // 发送缓冲区
   private AtomicBoolean running; // 是否在发送
-  private AtomicBoolean listening; // 是否在发送
   private int cwnd; // 窗口大小
   private int ssthresh; // 阈值
   private long estimateRTT; // 往返时间
   private long devRTT;
   private long timeoutInterval;
-  private boolean slowMode; // 慢启动模式
-  private int ack;
+  private int ackPacketNo; // 已确认发送包序号
+  private int dupACKCount; // 冗余次数
+  private int lastACK;
   private InetSocketAddress socketAddress;
+  private boolean blockMode;
 
 
-  public NetSocket(int port) {
+  public NetSocket(int port, boolean isBlockMode) {
+    blockMode = isBlockMode;
     initSocket(port);
     estimateRTT = 0;
   }
 
-  public NetSocket(int port, InetAddress targetIP, int targetPort) {
+  public NetSocket(int port, InetSocketAddress target, boolean isBlockMode) {
+    blockMode = isBlockMode;
     initSocket(port);
-    setTarget(targetIP, targetPort);
-  }
-
-  public AddressInfo getTarget() {
-    AddressInfo addressInfo = new AddressInfo();
-    addressInfo.ip = targetIP;
-    addressInfo.port = targetPort;
-    addressInfo.valid = true;
-    return addressInfo;
-  }
-
-  // 设置目标
-  private void setTarget(InetAddress targetIP, int targetPort) {
-    this.targetPort = targetPort;
-    this.targetIP = targetIP;
-    this.socketAddress = new InetSocketAddress(targetIP, targetPort);
-  }
-
-  public void setTimeOut(int timeout) {
-    try {
-      this.socket.setSoTimeout(timeout);
-    } catch (SocketException e) {
-      e.printStackTrace();
-    }
+    this.socketAddress = target;
   }
 
   // 初始化自身socket
   private void initSocket(int port) {
     this.running = new AtomicBoolean(false);
-    this.listening = new AtomicBoolean(false);
-    this.ack = 0;
+    this.ackPacketNo = 0;
+    this.timeoutInterval = 0;
     this.seq = 0;
     this.cwnd = 1;
+    this.ssthresh = 64;
     this.bufferPackets = new LinkedList<>();
     try {
-      channel = DatagramChannel.open();
-      channel.configureBlocking(false);
-      this.socket = channel.socket();
-      socket.bind(new InetSocketAddress(port));
+      if (blockMode) {
+        socket = new DatagramSocket(port);
+      } else {
+        channel = DatagramChannel.open();
+        channel.configureBlocking(false);
+        channel.socket().bind(new InetSocketAddress(port));
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -83,31 +61,50 @@ public class NetSocket implements AutoCloseable {
 
   @Override
   public void close() {
-    socket.close();
+    if (blockMode) {
+      socket.close();
+    } else {
+      channel.socket().close();
+    }
   }
 
   public interface listenCallBack {
     UDPPacket Receive(UDPPacket data, UDPPacket ack);
   }
 
-  public void listen(listenCallBack callBack) {
-    setBlocking(true);
+  public void listen(listenCallBack callBack, int timeout) {
+    this.ackPacketNo = -1;
     while (true) {
-      UDPPacket data = UDPReceive();
-      if (data != null) {
-        UDPPacket ackPacket = new UDPPacket(seq++);
-        ackPacket.setAck(data.getSeq());
-        if (data.isFIN()) {
-          ackPacket.setFIN(true);
-          break;
-        } else {
-          ackPacket = callBack.Receive(data, ackPacket);
-        }
-        try {
-          UDPSend(ackPacket, data.getFrom());
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
+      UDPPacket data = UDPReceiveBlock(timeout);
+      if (data == null) {
+        System.out.println("Listen time out!");
+        break;
+      }
+      if (data.isEND()) {
+        ackPacketNo = -1;
+      }
+      UDPPacket ackPacket;
+      if (ackPacketNo == -1) {
+        ackPacketNo = data.getSeq();
+      } else if (ackPacketNo + 1 == data.getSeq()) {
+        ackPacketNo++;
+      } else if (ackPacketNo > data.getSeq()) {
+        continue;
+      }
+      ackPacket = new UDPPacket(seq++);
+      ackPacket.setAck(ackPacketNo);
+      if (data.isFIN()) {
+        ackPacket.setFIN(true);
+      } else {
+        ackPacket = callBack.Receive(data, ackPacket);
+      }
+      try {
+        UDPSend(ackPacket, data.getFrom());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      if (data.isFIN()) {
+        break;
       }
     }
     System.out.println("Finish!");
@@ -115,104 +112,152 @@ public class NetSocket implements AutoCloseable {
   }
 
 
-  public void send(byte[] content, UDPPacket.ACKCallBack callBack) throws IOException {
+  public void send(byte[] content, UDPPacket.ACKCallBack callBack, boolean isEnd) {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setCallBack(callBack);
     packet.setData(content);
+    packet.setEND(isEnd);
     addPackToQueue(packet);
   }
 
-  private void addPackToQueue(UDPPacket packet) throws IOException {
+  private void addPackToQueue(UDPPacket packet) {
     this.bufferPackets.add(packet);
-    if (listening.compareAndSet(false, true)) {
-      (new Thread(this::listenACK)).start();
-    }
     if (running.compareAndSet(false, true)) {
-      (new Thread(this::sendBuff)).start();
+      sendPacket();
     }
-//    if (running.compareAndSet(false, true)) {
-//      run();
-//    }
   }
 
-  private void listenACK() {
-    setBlocking(true);
+  private void sendPacket() {
     while (true) {
-      UDPPacket rec = UDPReceive();
-
-
-    }
-  }
-
-  private void sendBuff() {
-
-  }
-
-  private void setBlocking(boolean blocking) {
-    try {
-      channel.configureBlocking(true);
-    } catch (IOException e) {
-      System.out.println("Can't set Blocking");
-      e.printStackTrace();
-    }
-
-  }
-
-  // 发送数据
-  private void run() throws IOException {
-    socket.setSoTimeout(2000);
-    // (new Thread(this::listenACK)).start();
-    while (bufferPackets.size() > 0) {
-      UDPPacket packet = bufferPackets.poll();
-      // UDPSend(packet);
-      // long nowTime = System.nanoTime();
-      // while (nowTime + timeoutInterval > System.nanoTime()) {
-      //   // Empty Loop
-      // }
-      int errorCount = 0;
-      while (true) {
-        packet.setTime(System.nanoTime());
-        UDPSend(packet, null);
-        if (packet.isFIN()) break;
-        UDPPacket rec = UDPReceive();
-        if (rec != null && ((rec.isACK() && rec.getAck() == packet.getSeq()) || rec.isFIN())) {
-          long rtt = (System.nanoTime()) - packet.getTime();
-          updateRRT(rtt);
-          System.out.println("\tseq:" + packet.getSeq() + "\testimateRTT:" + rtt + "," + this.estimateRTT + "," + this.devRTT + "," + this.timeoutInterval);
-          if (packet.getCallBack() != null) {
-            packet.getCallBack().success(rec);
+      // 并行发送
+      boolean goodbye = false;
+      for (int i = 0; i < cwnd && i < bufferPackets.size(); i++) {
+        try {
+          UDPPacket packet = bufferPackets.get(i);
+          packet.setTime(System.nanoTime());
+          UDPSend(packet, null);
+          if (packet.isFIN()) {
+            goodbye = true;
           }
-          break;
-        } else {
-          errorCount++;
-        }
-        if (errorCount > 5) {
-          System.out.println("[ERROR] System error.");
-          System.exit(-1);
+        } catch (IOException e) {
+          e.printStackTrace();
         }
       }
+      if (goodbye) {
+        if (blockMode) {
+          System.out.println("Port " + socket.getLocalPort() + " Closed.");
+        } else {
+          System.out.println("Port " + channel.socket().getLocalPort() + " Closed.");
+        }
+        break;
+      }
+      // 接受
+      UDPPacket packet;
+      if (!blockMode) {
+        packet = UDPReceive();
+      } else {
+        packet = UDPReceiveBlock(2000);
+      }
+      onACK(packet);
+      if (timeoutInterval > (10 * 1000 * (long) (1000 * 1000))) { // 超时10秒
+        System.out.println("[ERROR] Time out! Over!");
+        break;
+      }
+      if (bufferPackets.size() == 0 || packet != null && packet.isFIN()) { // 没有等待中的ACK了
+        break;
+      } else if (!blockMode) {
+        long start = System.nanoTime();
+        while (System.nanoTime() - start < timeoutInterval) ; // 等待预计RTT
+      }
+
     }
     running.set(false);
   }
 
-  private void updateRRT(long rtt) {
+  // 接收到
+  private void onACK(UDPPacket packet) {
+    if (packet != null && packet.isFIN()) {
+      bufferPackets.clear();
+      return;
+    }
+    if (packet != null && packet.getAck() != bufferPackets.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
+      if (packet.getAck() == lastACK) {
+        dupACKCount++;
+        if (dupACKCount == 3) {
+          ssthresh = (cwnd / 2) + 1;
+          cwnd = 1;
+        }
+      }
+      ssthresh = (cwnd / 2) + 1;
+      cwnd = ssthresh + 1; // 快速恢复
+      lastACK = packet.getAck();
+    } else if (packet != null && packet.getAck() == bufferPackets.getFirst().getSeq()) { // 收到正确的ACK
+      if (cwnd < ssthresh) { // 小于阈值
+        cwnd *= 2; // TCP Tahoe
+      } else { // 大于阈值
+        cwnd++; // TCP Reno
+      }
+      lastACK = packet.getAck();
+      dupACKCount = 0;
+      if (bufferPackets.size() == 0) {
+        System.out.println("[ERROR] System Error! Null Buffer!");
+        return;
+      }
+      UDPPacket sourcePacket = bufferPackets.removeFirst();
+      updateRTT((System.nanoTime()) - sourcePacket.getTime()); // 估计 RTT
+      if (sourcePacket.getCallBack() != null) {
+        sourcePacket.getCallBack().success(packet);
+      }
+    } else if (packet == null) { // 收到空包 TimeOut
+      ssthresh = cwnd / 2; // 阈值减半
+      cwnd = 1;
+      dupACKCount = 0;
+    }
+  }
+
+  private void updateRTT(long rtt) {
     if (this.estimateRTT == 0) this.estimateRTT = rtt;
     double a = 0.125;
     this.estimateRTT = (long) ((1 - a) * this.estimateRTT + a * rtt);
     if (this.devRTT == 0) this.devRTT = rtt;
     double b = 0.25;
     this.devRTT = (long) ((1 - b) * this.devRTT + b * Math.abs(this.estimateRTT - rtt));
-    this.timeoutInterval = this.estimateRTT + 4 * this.devRTT;
+    this.timeoutInterval = this.estimateRTT + 8 * this.devRTT;
   }
 
   private void UDPSend(UDPPacket packetData, InetSocketAddress to) throws IOException {
     byte[] data = ByteConverter.getByte(packetData);
     if (data == null) throw new IOException();
-    ByteBuffer buffer = ByteBuffer.wrap(data);
-    if (to == null) {
-      channel.send(buffer, socketAddress);
+    if (blockMode) {
+      if (to != null) {
+        socket.send(new DatagramPacket(data, data.length, to.getAddress(), to.getPort()));
+      } else {
+        socket.send(new DatagramPacket(data, data.length, socketAddress.getAddress(), socketAddress.getPort()));
+      }
     } else {
-      channel.send(buffer, to);
+      ByteBuffer buffer = ByteBuffer.wrap(data);
+      if (to == null) {
+        channel.send(buffer, socketAddress);
+      } else {
+        channel.send(buffer, to);
+      }
+
+    }
+  }
+
+  private UDPPacket UDPReceiveBlock(int timeout) {
+    byte[] buf = new byte[1400];
+    DatagramPacket p = new DatagramPacket(buf, 1400);
+    try {
+      socket.setSoTimeout(timeout);
+      socket.receive(p);
+      UDPPacket packet = (UDPPacket) ByteConverter.ReadByte(p.getData());
+      if (packet != null) {
+        packet.setFrom(new InetSocketAddress(p.getAddress(), p.getPort()));
+      }
+      return packet;
+    } catch (IOException e) {
+      return null;
     }
   }
 
@@ -231,11 +276,13 @@ public class NetSocket implements AutoCloseable {
   }
 
   // 断开连接
-  public void disconnect(UDPPacket.ACKCallBack callBack) throws IOException {
+  public void disconnect(UDPPacket.ACKCallBack callBack) {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setFIN(true);
     packet.setCallBack(callBack);
+    packet.setEND(true);
     addPackToQueue(packet);
+    System.out.println("Finish!");
   }
 
 }

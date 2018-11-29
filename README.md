@@ -5,7 +5,7 @@ Send and receive big file by udp
 ## Usage
 
 ```bash
-Usage: LFTP [-hV] [COMMAND]
+Usage: lftp [-hV] [COMMAND]
 Send and receive big file by udp.
   -h, --help      Show this help message and exit.
   -V, --version   Print version information and exit.
@@ -15,28 +15,31 @@ Commands:
   lget    get file from server.
   list    list files in server.
 
-Usage: LFTP server [-hV] [-d=<data>] [-p=<port>]
+Usage: lftp server [-hV] [-c=<clientCount>] [-d=<dir>] [-p=<port>]
+                   [-s=<portPoolStart>]
 Send and receive big file by udp.
-  -d, --data=<data>   Server data dir.
+  -c, --client=<clientCount>
+                      The number of clients at the same time.
+  -d, --dir=<dir>     Server dir dir.
   -h, --help          Show this help message and exit.
   -p, --port=<port>   Server listen port.
+  -s, --start=<portPoolStart>
+                      Start port pool
   -V, --version       Print version information and exit.
 
-Usage: LFTP lget [-hV] [-s=<server>] [<file>...]
+Usage: lftp lget [-hV] [-c=<controlPort>] [-d=<dir>] [-p=<sendPort>]
+                 [-s=<server>] [<files>...]
 get file from server.
-      [<file>...]         file path
+      [<files>...]        file path
+  -c, --control=<controlPort>
+                          Control port.
+  -d, --dir=<dir>         Save file dir.
   -h, --help              Show this help message and exit.
+  -p, --send=<sendPort>   Send port.
   -s, --server=<server>   Server location.
   -V, --version           Print version information and exit.
 
-Usage: LFTP lsend [-hV] [-s=<server>] [<file>...]
-Send file to server.
-      [<file>...]         file path
-  -h, --help              Show this help message and exit.
-  -s, --server=<server>   Server location.
-  -V, --version           Print version information and exit.
-
-Usage: LFTP list [-hV] [-s=<server>]
+Usage: lftp list [-hV] [-s=<server>]
 list files in server.
   -h, --help              Show this help message and exit.
   -s, --server=<server>   Server location.
@@ -47,11 +50,12 @@ list files in server.
 
 ```bash
 # Run a server
-$ LFTP server -p=3000 -d=./data/
+$ LFTP server -p=3000 -d=./data
 # Send a file
-$ LFTP lsend -s=127.0.0.1:3000 ./test.txt
+$ LFTP lsend -s=127.0.0.1:3000 ./data/test.txt
 # Get a file
-$ LFTP lget -s=127.0.0.1:3000 ./text.txt
+$ LFTP lget -s=127.0.0.1:3000 -d ./data text.txt
 # List file
 $ LFTP list -s=127.0.0.1:3000
 ```
+

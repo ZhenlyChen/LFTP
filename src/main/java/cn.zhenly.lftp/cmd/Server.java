@@ -7,7 +7,6 @@ import cn.zhenly.lftp.service.SendThread;
 import picocli.CommandLine.*;
 
 import java.io.File;
-import java.io.IOException;
 
 import static cn.zhenly.lftp.cmd.CmdParameter.isPortAvailable;
 
@@ -23,7 +22,7 @@ public class Server implements Runnable {
   @Option(names = {"-c", "--client"}, description = "The number of clients at the same time.", defaultValue = "10")
   private int clientCount;
 
-  @Option(names = {"-d", "--dir"}, description = "Server dir dir.")
+  @Option(names = {"-d", "--dir"}, description = "Server dir dir.", defaultValue = "./serverData")
   private String dir;
 
   private boolean[] usedPort;
@@ -49,7 +48,7 @@ public class Server implements Runnable {
     }
     File file = FileIO.getDir(dir);
     if (file == null) return;
-    NetSocket netSocket = new NetSocket(port);
+    NetSocket netSocket = new NetSocket(port, true);
     System.out.println("[INFO] Listening in localhost:" + port);
     netSocket.listen((packet, ack) -> {
       String recStr = new String(packet.getData());
@@ -62,8 +61,7 @@ public class Server implements Runnable {
           StringBuilder sb = new StringBuilder();
           for (File f : fileList) {
             if (f.isFile()) {
-              sb.append(f.getName());
-              sb.append("\n");
+              sb.append(f.getName()).append("-----").append(f.length() / 1024).append("KB\n");
             }
           }
           ack.setData(sb.toString().getBytes());
@@ -95,14 +93,14 @@ public class Server implements Runnable {
               System.out.printf("[ERROR] %s is not a file.%n", getFilePath);
             }
             SendThread receiveThread =
-                    new SendThread(getPort, fileOfSend, netSocket.getTarget(), () -> usedPort[getPortIndex] = false);
+                    new SendThread(getPort, fileOfSend, packet.getFrom(), () -> usedPort[getPortIndex] = false);
             receiveThread.start();
             usedPort[getPortIndex] = true;
           }
           break;
       }
       return ack;
-    });
+    }, 0);
   }
 
   private int getFreePortIndex() {

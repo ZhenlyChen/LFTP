@@ -1,19 +1,17 @@
 package cn.zhenly.lftp.net;
 
 import java.io.*;
-import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 
 // 基本数据包
 public class UDPPacket implements Serializable {
-  private static final transient String TEMP_ENCODING = "ISO-8859-1";
-  private static final transient String DEFAULT_ENCODING = "UTF-8";
   private transient ACKCallBack callBack;
   private transient InetSocketAddress from;
   private transient long time;
   private int winSize; // 窗口大小 (拥塞控制)
   private int seq; // 序列号
   private int ack; // 确认号
+  private boolean END; // 序列结束标志位
   private boolean ACK; // ACK标志位
   private boolean FIN; // FIN标志位
   private byte[] data; // 数据包
@@ -40,6 +38,14 @@ public class UDPPacket implements Serializable {
 
   public void setFrom(InetSocketAddress from) {
     this.from = from;
+  }
+
+  public boolean isEND() {
+    return END;
+  }
+
+  public void setEND(boolean END) {
+    this.END = END;
   }
 
   public interface ACKCallBack {

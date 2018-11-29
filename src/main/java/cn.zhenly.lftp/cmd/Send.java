@@ -4,6 +4,7 @@ import cn.zhenly.lftp.net.AddressInfo;
 import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import cn.zhenly.lftp.net.Util;
@@ -18,7 +19,7 @@ public class Send implements Runnable {
   @Option(names = {"-s", "--server"}, description = "Server location.")
   private String server;
 
-  @Parameters(description = "file path")
+  @Parameters(description = "file path", defaultValue = "./data")
   private List<String> files;
 
   @Option(names = {"-c", "--control"}, description = "Control port.", defaultValue = "9000")
@@ -36,11 +37,11 @@ public class Send implements Runnable {
     if (!file.exists() || !file.isFile()) {
       System.out.printf("[ERROR] %s is not a file.%n", cmdParameter.fileName);
     }
-    try (NetSocket netSocket = new NetSocket(controlPort, target.ip, target.port)) {
+    try (NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true)) {
       netSocket.send("SEND".getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
-        if (port != -1) FileNet.sendFile(new NetSocket(sendPort, target.ip, port), file, false);
-      });
+        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), file, true);
+      }, true);
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -7,7 +7,7 @@ import cn.zhenly.lftp.service.FileIO;
 import cn.zhenly.lftp.service.FileNet;
 import picocli.CommandLine.*;
 
-import java.io.File;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 @Command(name = "lget", mixinStandardHelpOptions = true, description = "get file from server.")
@@ -19,7 +19,7 @@ public class Get implements Runnable {
   @Option(names = {"-d", "--dir"}, description = "Save file dir.", defaultValue = "./download")
   private String dir;
 
-  @Parameters(description = "file path")
+  @Parameters(description = "file path", defaultValue = "./recvFile")
   private List<String> files;
 
   @Option(names = {"-c", "--control"}, description = "Control port.", defaultValue = "9000")
@@ -37,11 +37,11 @@ public class Get implements Runnable {
       return;
     }
     if (FileIO.getDir(dir) == null) return;
-    try (NetSocket netSocket = new NetSocket(controlPort, target.ip, target.port)) {
+    try (NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true)) {
       netSocket.send(("GETS" + fileName).getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
         if (port != -1) FileNet.listenReceiveFile(netSocket, dir, true);
-      });
+      }, true);
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -1,11 +1,6 @@
 package cn.zhenly.lftp.service;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Date;
-import java.util.List;
 
 // 进度条显示
 class Percentage {

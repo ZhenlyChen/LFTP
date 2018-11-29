@@ -1,23 +1,22 @@
 package cn.zhenly.lftp.service;
 
-import cn.zhenly.lftp.net.AddressInfo;
 import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 public class SendThread implements Runnable {
   private int port;
   private Thread t;
   private File file;
   private CallbackEnd callbackEnd;
-  private AddressInfo addressInfo;
+  private InetSocketAddress addressInfo;
 
   public interface CallbackEnd {
     void finish();
   }
 
-  public SendThread(int port, File file, AddressInfo addressInfo, CallbackEnd callbackEnd) {
+  public SendThread(int port, File file, InetSocketAddress addressInfo, CallbackEnd callbackEnd) {
     this.port = port;
     this.file = file;
     this.addressInfo= addressInfo;
@@ -26,7 +25,7 @@ public class SendThread implements Runnable {
 
   @Override
   public void run() {
-    NetSocket netSocket = new NetSocket(port, addressInfo.ip, addressInfo.port);
+    NetSocket netSocket = new NetSocket(port, addressInfo, false);
     FileNet.sendFile(netSocket, file, false);
     callbackEnd.finish();
   }

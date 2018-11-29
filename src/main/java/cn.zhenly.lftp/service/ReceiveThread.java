@@ -20,7 +20,7 @@ public class ReceiveThread implements Runnable {
 
   @Override
   public void run() {
-    FileNet.listenReceiveFile(new NetSocket(port), dir, false);
+    FileNet.listenReceiveFile(new NetSocket(port, true), dir, false);
     callbackEnd.finish();
   }
 

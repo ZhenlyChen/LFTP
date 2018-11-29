@@ -1,5 +1,7 @@
 .gradle/*
 out/*
-data/*
 lib/*
+
+data/*
 recvFile/*
+downlaod/*
