@@ -12,7 +12,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class NetSocket implements AutoCloseable {
   private final static int MAX_BUFFER_SIZE = 4096; // 最多可以读取4M数据
   private final Semaphore semaphoreSend = new Semaphore(MAX_BUFFER_SIZE); // 信号量(防止一次性读取太多数据到内存中)
-  private final Semaphore semaphoreRecv = new Semaphore(MAX_BUFFER_SIZE); // 接收信号量
   private int seq; // 包序号
   private int selfPort; // 自身端口号
   private DatagramSocket socket; // 阻塞Socket
@@ -113,7 +112,6 @@ public class NetSocket implements AutoCloseable {
       ackPacket = new UDPPacket(seq++);
       ackPacket.setACK();
       ackPacket.setAck(ackPacketNo);
-      ackPacket.setWinSize(semaphoreRecv.availablePermits());
       if (data.isFIN()) {
         ackPacket.setFIN();
       } else {
@@ -137,7 +135,7 @@ public class NetSocket implements AutoCloseable {
     packet.setData(content);
     packet.setEND(isEnd);
     packet.setSession(session);
-    addPackToQueue(packet);
+    addPackToSendQueue(packet);
   }
 
   public void send(byte[] content, UDPPacket.ACKCallBack callBack) {
@@ -146,12 +144,12 @@ public class NetSocket implements AutoCloseable {
     packet.setData(content);
     packet.setEND(true); // 非序列化数据包
     packet.setSession(0); // 非会话数据包
-    addPackToQueue(packet);
+    addPackToSendQueue(packet);
   }
 
 
   // 加入发送队列
-  private void addPackToQueue(UDPPacket packet) {
+  private void addPackToSendQueue(UDPPacket packet) {
     try {
       // 发送缓存信号量
       semaphoreSend.acquire();
@@ -166,6 +164,17 @@ public class NetSocket implements AutoCloseable {
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
+    }
+  }
+
+  // 加入接收队列
+  private void addPackToRecvQueue(UDPPacket packet) {
+    recvBuffRWLock.writeLock().lock();
+    receivePackets.add(packet); // 加入接收缓存
+    recvBuffRWLock.writeLock().unlock();
+    if (recvThread == null || !recvThread.isAlive()) {
+      this.recvThread = new Thread(this::dealRecvPacket);
+      recvThread.start(); // 开启接收处理线程
     }
   }
 
@@ -229,7 +238,7 @@ public class NetSocket implements AutoCloseable {
         break;
       }
       // 第一个包是否已经超时
-      if (sendingPacket.size() != 0 && System.nanoTime() - sendingPacket.getFirst().getTime() > timeoutInterval) {
+      if (sendingPacket.size() != 0) {
         ssthresh = cwnd / 2;
         cwnd = ssthresh + 1;
         dupACKCount = 0;
@@ -275,28 +284,17 @@ public class NetSocket implements AutoCloseable {
       updateRTT((System.nanoTime()) - sourcePacket.getTime()); // 估计 RTT
       if (sourcePacket.getCallBack() != null) {
         packet.setCallBack(sourcePacket.getCallBack());
-        try {
-          semaphoreRecv.acquire();
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        recvBuffRWLock.writeLock().lock();
-        receivePackets.add(packet); // 加入接收缓存
-        recvBuffRWLock.writeLock().unlock();
-        if (recvThread == null || !recvThread.isAlive()) {
-          this.recvThread = new Thread(this::dealRecvPacket);
-          recvThread.start(); // 开启接收处理线程
-        }
+        addPackToRecvQueue(packet);
       }
     }
   }
+
 
   // 处理接收包
   private void dealRecvPacket() {
     recvBuffRWLock.writeLock().lock();
     while (receivePackets.size() > 0) {
       UDPPacket packet = receivePackets.removeFirst();
-      semaphoreRecv.release();
       packet.getCallBack().success(packet);
     }
     recvBuffRWLock.writeLock().unlock();
@@ -371,6 +369,6 @@ public class NetSocket implements AutoCloseable {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setFIN();
     packet.setEND(true);
-    addPackToQueue(packet);
+    addPackToSendQueue(packet);
   }
 }
