@@ -45,7 +45,7 @@ public class Send implements Runnable {
         if (port != -1) {
           FileNet.sendFile(new NetSocket(sendPort, new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true, sessionId);
         }
-      }, true, 0);
+      });
     } catch (Exception e) {
       e.printStackTrace();
     }

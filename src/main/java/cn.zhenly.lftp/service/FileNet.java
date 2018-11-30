@@ -70,7 +70,7 @@ public class FileNet {
                 if (showPercentage) percentage.show((float) (id + 1) / chunkCount, file.length());
                 // if (id > chunkCount - 100) System.out.println("id: " +id + "count: " + chunkCount);
                 if (id + 1 == chunkCount) {
-                  netSocket.disconnect(null);
+                  netSocket.disconnect();
                   lock.release();
                 }
               }

@@ -14,9 +14,9 @@ public class NetSocket implements AutoCloseable {
   private final Semaphore semaphoreSend = new Semaphore(MAX_BUFFER_SIZE); // 信号量(防止一次性读取太多数据到内存中)
   private final Semaphore semaphoreRecv = new Semaphore(MAX_BUFFER_SIZE); // 接收信号量
   private int seq; // 包序号
-  private int selfPort;
-  private DatagramSocket socket;
-  private DatagramChannel channel;
+  private int selfPort; // 自身端口号
+  private DatagramSocket socket; // 阻塞Socket
+  private DatagramChannel channel; // 非阻塞Socket
   private LinkedList<UDPPacket> sendingPacket; // 发送窗口缓冲区
   private LinkedList<UDPPacket> sendPackets; // 发送数据缓冲区
   private ReadWriteLock sendBuffRWLock = new ReentrantReadWriteLock(); // 发送缓冲区读写🔒
@@ -88,7 +88,9 @@ public class NetSocket implements AutoCloseable {
     UDPPacket Receive(UDPPacket data, UDPPacket ack);
   }
 
+  // 监听信息
   public void listen(listenCallBack callBack, int timeout) {
+    assert (blockMode); // 必须阻塞模式才能使用
     this.ackPacketNo = -1;
     while (true) {
       UDPPacket data = UDPReceiveBlock(timeout);
@@ -107,6 +109,7 @@ public class NetSocket implements AutoCloseable {
       } else if (ackPacketNo > data.getSeq()) { // 失序数据
         continue;
       }
+      // 发送确认ACK报文
       ackPacket = new UDPPacket(seq++);
       ackPacket.setACK();
       ackPacket.setAck(ackPacketNo);
@@ -127,6 +130,7 @@ public class NetSocket implements AutoCloseable {
     }
   }
 
+  // 将发送数据加入缓存
   public void send(byte[] content, UDPPacket.ACKCallBack callBack, boolean isEnd, int session) {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setCallBack(callBack);
@@ -136,12 +140,26 @@ public class NetSocket implements AutoCloseable {
     addPackToQueue(packet);
   }
 
+  public void send(byte[] content, UDPPacket.ACKCallBack callBack) {
+    UDPPacket packet = new UDPPacket(seq++);
+    packet.setCallBack(callBack);
+    packet.setData(content);
+    packet.setEND(true); // 非序列化数据包
+    packet.setSession(0); // 非会话数据包
+    addPackToQueue(packet);
+  }
+
+
+  // 加入发送队列
   private void addPackToQueue(UDPPacket packet) {
     try {
+      // 发送缓存信号量
       semaphoreSend.acquire();
       sendBuffRWLock.writeLock().lock();
+      // 添加发送数据到缓存中
       this.sendPackets.add(packet);
       sendBuffRWLock.writeLock().unlock();
+      // 启动发送线程
       if (sendThread == null || !sendThread.isAlive()) {
         this.sendThread = new Thread(this::sendPacket);
         sendThread.start();
@@ -152,6 +170,7 @@ public class NetSocket implements AutoCloseable {
   }
 
   private void sendPacket() {
+    // 记录上一次ACK的时间
     long lastACKTime = System.nanoTime();
     while (true) {
       boolean goodbye = false;
@@ -179,7 +198,7 @@ public class NetSocket implements AutoCloseable {
         this.close();
         break;
       }
-      // 接受
+      // 一个RTT时间内循环接收ACK报文
       long start = System.nanoTime();
       boolean exit = false;
       do {
@@ -189,11 +208,11 @@ public class NetSocket implements AutoCloseable {
         } else {
           packet = UDPReceiveBlock(2000);
         }
-        if (packet != null && packet.isACK()) {
+        if (packet != null && packet.isACK()) { // 接收到ACK报文
           lastACKTime = System.nanoTime();
           onACK(packet);
         }
-        if (packet != null && packet.isFIN()) {
+        if (packet != null && packet.isFIN()) { // 收到结束报文
           this.close();
           exit = true;
           break;
@@ -202,9 +221,9 @@ public class NetSocket implements AutoCloseable {
           if (sendPackets.size() == 0) exit = true; // 没有需要发的包了
           break;
         }
-      } while (System.nanoTime() - start < timeoutInterval && !blockMode);
+      } while (System.nanoTime() - start < timeoutInterval && !blockMode); // 一个RTT估计时间
       if (exit) break;
-      if (System.nanoTime() - lastACKTime > (10 * 1000 * (long) (1000 * 1000))) { // 超时10秒
+      if (System.nanoTime() - lastACKTime > (10 * 1000 * (long) (1000 * 1000))) { // 超时10秒结束
         System.out.println("[ERROR] Time out! Over!");
         this.close();
         break;
@@ -219,7 +238,7 @@ public class NetSocket implements AutoCloseable {
     if (sendPackets.size() != 0) sendPacket();
   }
 
-  // 接收到
+  // 接收到ACK
   private void onACK(UDPPacket packet) {
     if (packet.isFIN()) {
       sendingPacket.clear();
@@ -249,7 +268,7 @@ public class NetSocket implements AutoCloseable {
         return;
       }
       if (packet.getWinSize() < 100) { // 接收缓冲区快满了
-        ssthresh = (cwnd / 2) + 1;
+        ssthresh = (cwnd / 2) + 1; // 减少发送窗口
         cwnd = ssthresh + 1;
       }
       UDPPacket sourcePacket = sendingPacket.removeFirst();
@@ -262,17 +281,17 @@ public class NetSocket implements AutoCloseable {
           e.printStackTrace();
         }
         recvBuffRWLock.writeLock().lock();
-        receivePackets.add(packet);
+        receivePackets.add(packet); // 加入接收缓存
         recvBuffRWLock.writeLock().unlock();
         if (recvThread == null || !recvThread.isAlive()) {
           this.recvThread = new Thread(this::dealRecvPacket);
-          recvThread.start();
+          recvThread.start(); // 开启接收处理线程
         }
       }
     }
   }
 
-
+  // 处理接收包
   private void dealRecvPacket() {
     recvBuffRWLock.writeLock().lock();
     while (receivePackets.size() > 0) {
@@ -283,6 +302,7 @@ public class NetSocket implements AutoCloseable {
     recvBuffRWLock.writeLock().unlock();
   }
 
+  // 修改RTT估计值
   private void updateRTT(long rtt) {
     if (this.estimateRTT == 0) this.estimateRTT = rtt;
     double a = 0.125;
@@ -293,6 +313,7 @@ public class NetSocket implements AutoCloseable {
     this.timeoutInterval = this.estimateRTT + 5 * this.devRTT;
   }
 
+  // 封包发送
   private void UDPSend(UDPPacket packetData, InetSocketAddress to) throws IOException {
     byte[] data = ByteConverter.getByte(packetData); // Max: 1321
     if (data == null) throw new IOException();
@@ -313,6 +334,7 @@ public class NetSocket implements AutoCloseable {
     }
   }
 
+  // 阻塞接收
   private UDPPacket UDPReceiveBlock(int timeout) {
     byte[] buf = new byte[1400];
     DatagramPacket p = new DatagramPacket(buf, 1400);
@@ -329,6 +351,7 @@ public class NetSocket implements AutoCloseable {
     }
   }
 
+  // 非阻塞接收
   private UDPPacket UDPReceive() {
     ByteBuffer byteBuffer = ByteBuffer.allocate(1400);
     try {
@@ -344,11 +367,10 @@ public class NetSocket implements AutoCloseable {
   }
 
   // 断开连接
-  public void disconnect(UDPPacket.ACKCallBack callBack) {
+  public void disconnect() {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setFIN();
     packet.setEND(true);
-    packet.setCallBack(callBack);
     addPackToQueue(packet);
   }
 }
