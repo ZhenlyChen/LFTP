@@ -93,7 +93,7 @@ public class Server implements Runnable {
               System.out.printf("[ERROR] %s is not a file.%n", getFilePath);
             }
             SendThread receiveThread =
-                    new SendThread(getPort, fileOfSend, packet.getFrom(), () -> usedPort[getPortIndex] = false);
+                    new SendThread(getPort, getFilePath, packet.getFrom(), () -> usedPort[getPortIndex] = false);
             receiveThread.start();
             usedPort[getPortIndex] = true;
           }

@@ -40,7 +40,7 @@ public class Send implements Runnable {
     try (NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true)) {
       netSocket.send("SEND".getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
-        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), file, true);
+        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true);
       }, true);
     } catch (Exception e) {
       e.printStackTrace();

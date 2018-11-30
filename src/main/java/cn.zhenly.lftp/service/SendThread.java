@@ -8,7 +8,7 @@ import java.net.InetSocketAddress;
 public class SendThread implements Runnable {
   private int port;
   private Thread t;
-  private File file;
+  private String filePath;
   private CallbackEnd callbackEnd;
   private InetSocketAddress addressInfo;
 
@@ -16,9 +16,9 @@ public class SendThread implements Runnable {
     void finish();
   }
 
-  public SendThread(int port, File file, InetSocketAddress addressInfo, CallbackEnd callbackEnd) {
+  public SendThread(int port, String filePath, InetSocketAddress addressInfo, CallbackEnd callbackEnd) {
     this.port = port;
-    this.file = file;
+    this.filePath = filePath;
     this.addressInfo= addressInfo;
     this.callbackEnd = callbackEnd;
   }
@@ -26,7 +26,7 @@ public class SendThread implements Runnable {
   @Override
   public void run() {
     NetSocket netSocket = new NetSocket(port, addressInfo, false);
-    FileNet.sendFile(netSocket, file, false);
+    FileNet.sendFile(netSocket, filePath, false);
     callbackEnd.finish();
   }
 

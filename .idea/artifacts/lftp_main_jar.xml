@@ -1,9 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="lftp_main:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/lftp_main_jar</output-path>
-    <root id="archive" name="lftp_main.jar">
-      <element id="module-output" name="lftp_main" />
-      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/info.picocli/picocli/3.7.0/cc77580eac545a49ec71f395561c4f1b9822c30a/picocli-3.7.0.jar" path-in-jar="/" />
-    </root>
-  </artifact>
-</component>

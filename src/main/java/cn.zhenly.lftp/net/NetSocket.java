@@ -11,18 +11,19 @@ public class NetSocket implements AutoCloseable {
   private int seq; // 包序号
   private DatagramSocket socket;
   private DatagramChannel channel;
-  private LinkedList<UDPPacket> bufferPackets; // 发送缓冲区
+  private LinkedList<UDPPacket> sendPackets; // 发送缓冲区
+  private LinkedList<UDPPacket> receivePackets; // 接受缓冲区
   private AtomicBoolean running; // 是否在发送
   private int cwnd; // 窗口大小
   private int ssthresh; // 阈值
-  private long estimateRTT; // 往返时间
-  private long devRTT;
-  private long timeoutInterval;
+  private long estimateRTT; // 估计往返时间
+  private long devRTT; // 网络波动
+  private long timeoutInterval; // 超时时间
   private int ackPacketNo; // 已确认发送包序号
   private int dupACKCount; // 冗余次数
-  private int lastACK;
-  private InetSocketAddress socketAddress;
-  private boolean blockMode;
+  private int lastACK; // 已确认包序号
+  private InetSocketAddress targetAddress; // 目标地址;
+  private boolean blockMode; // 阻塞模式
 
 
   public NetSocket(int port, boolean isBlockMode) {
@@ -34,7 +35,7 @@ public class NetSocket implements AutoCloseable {
   public NetSocket(int port, InetSocketAddress target, boolean isBlockMode) {
     blockMode = isBlockMode;
     initSocket(port);
-    this.socketAddress = target;
+    this.targetAddress = target;
   }
 
   // 初始化自身socket
@@ -45,7 +46,7 @@ public class NetSocket implements AutoCloseable {
     this.seq = 0;
     this.cwnd = 1;
     this.ssthresh = 64;
-    this.bufferPackets = new LinkedList<>();
+    this.sendPackets = new LinkedList<>();
     try {
       if (blockMode) {
         socket = new DatagramSocket(port);
@@ -121,7 +122,7 @@ public class NetSocket implements AutoCloseable {
   }
 
   private void addPackToQueue(UDPPacket packet) {
-    this.bufferPackets.add(packet);
+    this.sendPackets.add(packet);
     if (running.compareAndSet(false, true)) {
       sendPacket();
     }
@@ -131,9 +132,9 @@ public class NetSocket implements AutoCloseable {
     while (true) {
       // 并行发送
       boolean goodbye = false;
-      for (int i = 0; i < cwnd && i < bufferPackets.size(); i++) {
+      for (int i = 0; i < cwnd && i < sendPackets.size(); i++) {
         try {
-          UDPPacket packet = bufferPackets.get(i);
+          UDPPacket packet = sendPackets.get(i);
           packet.setTime(System.nanoTime());
           UDPSend(packet, null);
           if (packet.isFIN()) {
@@ -163,7 +164,7 @@ public class NetSocket implements AutoCloseable {
         System.out.println("[ERROR] Time out! Over!");
         break;
       }
-      if (bufferPackets.size() == 0 || packet != null && packet.isFIN()) { // 没有等待中的ACK了
+      if (sendPackets.size() == 0 || packet != null && packet.isFIN()) { // 没有等待中的ACK了
         break;
       } else if (!blockMode) {
         long start = System.nanoTime();
@@ -177,10 +178,10 @@ public class NetSocket implements AutoCloseable {
   // 接收到
   private void onACK(UDPPacket packet) {
     if (packet != null && packet.isFIN()) {
-      bufferPackets.clear();
+      sendPackets.clear();
       return;
     }
-    if (packet != null && packet.getAck() != bufferPackets.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
+    if (packet != null && packet.getAck() != sendPackets.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
       if (packet.getAck() == lastACK) {
         dupACKCount++;
         if (dupACKCount == 3) {
@@ -191,7 +192,7 @@ public class NetSocket implements AutoCloseable {
       ssthresh = (cwnd / 2) + 1;
       cwnd = ssthresh + 1; // 快速恢复
       lastACK = packet.getAck();
-    } else if (packet != null && packet.getAck() == bufferPackets.getFirst().getSeq()) { // 收到正确的ACK
+    } else if (packet != null && packet.getAck() == sendPackets.getFirst().getSeq()) { // 收到正确的ACK
       if (cwnd < ssthresh) { // 小于阈值
         cwnd *= 2; // TCP Tahoe
       } else { // 大于阈值
@@ -199,11 +200,11 @@ public class NetSocket implements AutoCloseable {
       }
       lastACK = packet.getAck();
       dupACKCount = 0;
-      if (bufferPackets.size() == 0) {
+      if (sendPackets.size() == 0) {
         System.out.println("[ERROR] System Error! Null Buffer!");
         return;
       }
-      UDPPacket sourcePacket = bufferPackets.removeFirst();
+      UDPPacket sourcePacket = sendPackets.removeFirst();
       updateRTT((System.nanoTime()) - sourcePacket.getTime()); // 估计 RTT
       if (sourcePacket.getCallBack() != null) {
         sourcePacket.getCallBack().success(packet);
@@ -222,7 +223,7 @@ public class NetSocket implements AutoCloseable {
     if (this.devRTT == 0) this.devRTT = rtt;
     double b = 0.25;
     this.devRTT = (long) ((1 - b) * this.devRTT + b * Math.abs(this.estimateRTT - rtt));
-    this.timeoutInterval = this.estimateRTT + 8 * this.devRTT;
+    this.timeoutInterval = this.estimateRTT + 6 * this.devRTT;
   }
 
   private void UDPSend(UDPPacket packetData, InetSocketAddress to) throws IOException {
@@ -232,12 +233,12 @@ public class NetSocket implements AutoCloseable {
       if (to != null) {
         socket.send(new DatagramPacket(data, data.length, to.getAddress(), to.getPort()));
       } else {
-        socket.send(new DatagramPacket(data, data.length, socketAddress.getAddress(), socketAddress.getPort()));
+        socket.send(new DatagramPacket(data, data.length, targetAddress.getAddress(), targetAddress.getPort()));
       }
     } else {
       ByteBuffer buffer = ByteBuffer.wrap(data);
       if (to == null) {
-        channel.send(buffer, socketAddress);
+        channel.send(buffer, targetAddress);
       } else {
         channel.send(buffer, to);
       }
