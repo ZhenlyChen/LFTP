@@ -22,11 +22,8 @@ public class Get implements Runnable {
   @Parameters(description = "file path", defaultValue = "./recvFile")
   private List<String> files;
 
-  @Option(names = {"-c", "--control"}, description = "Control port.", defaultValue = "9000")
+  @Option(names = {"-p", "--port"}, description = "Port.", defaultValue = "9000")
   private int controlPort;
-
-  @Option(names = {"-p", "--send"}, description = "Send port.", defaultValue = "9001")
-  private int sendPort;
 
   @Override
   public void run() {

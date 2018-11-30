@@ -26,18 +26,26 @@ Send and receive big file by udp.
   -s, --start=<portPoolStart>
                       Start port pool
   -V, --version       Print version information and exit.
-
-Usage: lftp lget [-hV] [-c=<controlPort>] [-d=<dir>] [-p=<sendPort>]
-                 [-s=<server>] [<files>...]
-get file from server.
+  
+Usage: lftp lsend [-hV] [-c=<controlPort>] [-p=<sendPort>] [-s=<server>]
+                  [<files>...]
+Send file to server.
       [<files>...]        file path
   -c, --control=<controlPort>
                           Control port.
-  -d, --dir=<dir>         Save file dir.
   -h, --help              Show this help message and exit.
   -p, --send=<sendPort>   Send port.
   -s, --server=<server>   Server location.
   -V, --version           Print version information and exit.
+
+Usage: lftp lget [-hV] [-d=<dir>] [-p=<controlPort>] [-s=<server>] [<files>...]
+get file from server.
+      [<files>...]           file path
+  -d, --dir=<dir>            Save file dir.
+  -h, --help                 Show this help message and exit.
+  -p, --port=<controlPort>   Port.
+  -s, --server=<server>      Server location.
+  -V, --version              Print version information and exit.
 
 Usage: lftp list [-hV] [-s=<server>]
 list files in server.
