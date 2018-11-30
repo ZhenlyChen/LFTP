@@ -13,37 +13,38 @@ import static cn.zhenly.lftp.net.ByteConverter.getByte;
 public class FileNet {
   private static FileData fileData;
   // 监听接受文件
-  public static void listenReceiveFile(NetSocket netSocket, String dir, boolean showPercentage) {
+  public static void listenReceiveFile(NetSocket netSocket, String dir, boolean showPercentage, int session) {
     Percentage percentage = new Percentage();
     fileData = null;
     netSocket.listen((data, ack) -> {
+      if (data.getSession() != session) {
+        ack.setData("-1".getBytes());
+        return ack;
+      }
       FileChunk fileChunk = (FileChunk) ByteConverter.ReadByte(data.getData());
       if (fileChunk != null) {
         if (fileChunk.getId() == -1 && fileData == null) {
           fileData = new FileData(fileChunk.getName(), fileChunk.getCount(), dir, fileChunk.getSize());
           System.out.println("[INFO] RecvFile " + fileChunk.getName() + " Chunks: " + fileChunk.getCount());
           ack.setData("OK".getBytes());
+          return ack;
         } else if (fileData != null) {
           if (showPercentage)
             percentage.show((float) (fileChunk.getId() + 1) / fileChunk.getCount(), fileChunk.getCount() * 1024);
           if (fileData.addChunk(fileChunk)) {
             ack.setData(String.valueOf(fileChunk.getId()).getBytes());
-          } else {
-            ack.setData(String.valueOf(-1).getBytes());
+            return ack;
           }
-        } else {
-          ack.setData(String.valueOf(-1).getBytes());
         }
-      } else {
-        ack.setData(String.valueOf(-1).getBytes());
       }
+      ack.setData("-1".getBytes());
       return ack;
     }, 10000);
     netSocket.close();
   }
 
   // 发送文件
-  public static void sendFile(NetSocket netSocket, String filePath, boolean showPercentage) {
+  public static void sendFile(NetSocket netSocket, String filePath, boolean showPercentage, int session) {
     FileIO.checkDir("./cache");
     File file = new File(filePath);
     int chunkCount = FileIO.getFileChunkCount(filePath);
@@ -65,12 +66,12 @@ public class FileNet {
                 netSocket.disconnect(null);
               }
             }
-          }, false);
+          }, false, session);
         }
       } else {
         System.out.println("[ERROR] Can't connect to server");
       }
-    }, true);
+    }, true, session);
     netSocket.close();
   }
 

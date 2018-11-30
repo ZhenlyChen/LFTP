@@ -4,6 +4,7 @@ import cn.zhenly.lftp.net.NetSocket;
 
 public class ReceiveThread implements Runnable {
   private int port;
+  private int session;
   private String dir;
   private Thread t;
   private CallbackEnd callbackEnd;
@@ -12,15 +13,16 @@ public class ReceiveThread implements Runnable {
     void finish();
   }
 
-  public ReceiveThread(int port, String dir, CallbackEnd callbackEnd) {
+  public ReceiveThread(int session, int port, String dir, CallbackEnd callbackEnd) {
     this.port = port;
     this.dir = dir;
+    this.session = session;
     this.callbackEnd = callbackEnd;
   }
 
   @Override
   public void run() {
-    FileNet.listenReceiveFile(new NetSocket(port, true), dir, false);
+    FileNet.listenReceiveFile(new NetSocket(port, true), dir, false ,session);
     callbackEnd.finish();
   }
 

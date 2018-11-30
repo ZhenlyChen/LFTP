@@ -41,8 +41,8 @@ public class Send implements Runnable {
       int sessionId = new Random().nextInt(10000);
       netSocket.send(("SEND" + sessionId).getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
-        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true);
-      }, true);
+        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true, sessionId);
+      }, true, 0);
     } catch (Exception e) {
       e.printStackTrace();
     }

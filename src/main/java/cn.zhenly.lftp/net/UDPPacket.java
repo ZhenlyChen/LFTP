@@ -11,6 +11,7 @@ public class UDPPacket implements Serializable {
   private int winSize; // 窗口大小 (拥塞控制)
   private int seq; // 序列号
   private int ack; // 确认号
+  private int session; // 会话ID
   private boolean END; // 序列结束标志位
   private boolean ACK; // ACK标志位
   private boolean FIN; // FIN标志位
@@ -46,6 +47,14 @@ public class UDPPacket implements Serializable {
 
   void setEND(boolean END) {
     this.END = END;
+  }
+
+  public int getSession() {
+    return session;
+  }
+
+  public void setSession(int session) {
+    this.session = session;
   }
 
   public interface ACKCallBack {

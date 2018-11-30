@@ -41,8 +41,8 @@ public class Get implements Runnable {
       int sessionId = new Random().nextInt(10000);
       netSocket.send(("GETS" + sessionId + "-" + fileName).getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
-        if (port != -1) FileNet.listenReceiveFile(netSocket, dir, true);
-      }, true);
+        if (port != -1) FileNet.listenReceiveFile(netSocket, dir, true, sessionId);
+      }, true, 0);
     } catch (Exception e) {
       e.printStackTrace();
     }

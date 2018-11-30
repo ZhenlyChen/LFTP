@@ -114,11 +114,12 @@ public class NetSocket implements AutoCloseable {
   }
 
 
-  public void send(byte[] content, UDPPacket.ACKCallBack callBack, boolean isEnd) {
+  public void send(byte[] content, UDPPacket.ACKCallBack callBack, boolean isEnd, int session) {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setCallBack(callBack);
     packet.setData(content);
     packet.setEND(isEnd);
+    packet.setSession(session);
     addPackToQueue(packet);
   }
 

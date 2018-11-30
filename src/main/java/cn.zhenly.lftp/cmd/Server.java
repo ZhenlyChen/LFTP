@@ -82,7 +82,7 @@ public class Server implements Runnable {
             int sendPort = portPoolStart + sendPortIndex;
             ack.setData(("PORT" + sendPort).getBytes());
             int finalSendPortIndex = sendPortIndex;
-            ReceiveThread receiveThread = new ReceiveThread(sendPort, dir, () -> usedPort[finalSendPortIndex] = -1);
+            ReceiveThread receiveThread = new ReceiveThread(sendSessionId, sendPort, dir, () -> usedPort[finalSendPortIndex] = -1);
             receiveThread.start();
             usedPort[sendPortIndex] = sendSessionId;
           }
@@ -109,7 +109,7 @@ public class Server implements Runnable {
             }
             int finalGetPortIndex= getPortIndex;
             SendThread receiveThread =
-                    new SendThread(getPort, getFilePath, packet.getFrom(), () -> usedPort[finalGetPortIndex] = -1);
+                    new SendThread(getSessionId, getPort, getFilePath, packet.getFrom(), () -> usedPort[finalGetPortIndex] = -1);
             receiveThread.start();
             usedPort[getPortIndex] = getSessionId;
           }

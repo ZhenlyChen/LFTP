@@ -25,6 +25,6 @@ public class GetList implements Runnable {
       System.out.println(new String(data.getData()));
       System.out.println("-----------------------");
       netSocket.close();
-    }, true);
+    }, true, 0);
   }
 }
