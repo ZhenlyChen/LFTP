@@ -6,15 +6,13 @@ import cn.zhenly.lftp.net.FileData;
 import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 import static cn.zhenly.lftp.net.ByteConverter.getByte;
 
 
 public class FileNet {
   private static FileData fileData;
-
+  // 监听接受文件
   public static void listenReceiveFile(NetSocket netSocket, String dir, boolean showPercentage) {
     Percentage percentage = new Percentage();
     fileData = null;
@@ -46,7 +44,7 @@ public class FileNet {
 
   // 发送文件
   public static void sendFile(NetSocket netSocket, String filePath, boolean showPercentage) {
-    FileIO.getDir("./cache");
+    FileIO.checkDir("./cache");
     File file = new File(filePath);
     int chunkCount = FileIO.getFileChunkCount(filePath);
     boolean[] finishChunk = new boolean[chunkCount];
@@ -63,6 +61,7 @@ public class FileNet {
               if (showPercentage) percentage.show((float) (id + 1) / chunkCount, file.length());
               finishChunk[id] = true;
               if (isFinishChunk(finishChunk, chunkCount)) {
+                // 断开连接
                 netSocket.disconnect(null);
               }
             }

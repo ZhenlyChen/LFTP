@@ -25,7 +25,7 @@ public class Server implements Runnable {
   @Option(names = {"-d", "--dir"}, description = "Server dir dir.", defaultValue = "./serverData")
   private String dir;
 
-  private boolean[] usedPort;
+  private int[] usedPort;
 
 
   @Override
@@ -42,11 +42,11 @@ public class Server implements Runnable {
     }
     System.out.println("[INFO] Start port pool: " + portPoolStart);
     System.out.println("[INFO] End port pool: " + (portPoolStart + clientCount - 1));
-    this.usedPort = new boolean[clientCount];
+    this.usedPort = new int[clientCount];
     for (int i = 0; i < clientCount; i++) {
-      this.usedPort[i] = false;
+      this.usedPort[i] = -1;
     }
-    File file = FileIO.getDir(dir);
+    File file = FileIO.checkDir(dir);
     if (file == null) return;
     NetSocket netSocket = new NetSocket(port, true);
     System.out.println("[INFO] Listening in localhost:" + port);
@@ -68,34 +68,50 @@ public class Server implements Runnable {
           break;
         case "SEND":
           // 从端口池中新开端口，等待客户端连接
-          int sendPortIndex = getFreePortIndex();
+          int sendSessionId = 0;
+          try {
+            sendSessionId = Integer.parseInt(recStr.substring(4));
+          } catch (NumberFormatException e) {
+            e.printStackTrace();
+          }
+          int sendPortIndex = getSessionPortIndex(sendSessionId);
+          if (sendPortIndex == -1) sendPortIndex = getFreePortIndex();
           if (sendPortIndex == -1) {
             ack.setData("BUSY".getBytes());
           } else {
             int sendPort = portPoolStart + sendPortIndex;
             ack.setData(("PORT" + sendPort).getBytes());
-            ReceiveThread receiveThread = new ReceiveThread(sendPort, dir, () -> usedPort[sendPortIndex] = false);
+            int finalSendPortIndex = sendPortIndex;
+            ReceiveThread receiveThread = new ReceiveThread(sendPort, dir, () -> usedPort[finalSendPortIndex] = -1);
             receiveThread.start();
-            usedPort[sendPortIndex] = true;
+            usedPort[sendPortIndex] = sendSessionId;
           }
           break;
         case "GETS":
+          int getSessionId = 0;
+          try {
+            getSessionId = Integer.parseInt(recStr.substring(4, recStr.indexOf('-')));
+          } catch (NumberFormatException e) {
+            e.printStackTrace();
+          }
           // 从端口池中新开端口，等待客户端连接
-          int getPortIndex = getFreePortIndex();
+          int getPortIndex = getSessionPortIndex(getSessionId);
+          if (getPortIndex == -1) getPortIndex = getFreePortIndex();
           if (getPortIndex == -1) {
             ack.setData("BUSY".getBytes());
           } else {
             int getPort = portPoolStart + getPortIndex;
             ack.setData(("PORT" + getPort).getBytes());
-            String getFilePath = dir + "./" + recStr.substring(4);
+            String getFilePath = dir + "./" + recStr.substring(recStr.indexOf('-') + 1);
             File fileOfSend = new File(getFilePath);
             if (!fileOfSend.exists() || !fileOfSend.isFile()) {
               System.out.printf("[ERROR] %s is not a file.%n", getFilePath);
             }
+            int finalGetPortIndex= getPortIndex;
             SendThread receiveThread =
-                    new SendThread(getPort, getFilePath, packet.getFrom(), () -> usedPort[getPortIndex] = false);
+                    new SendThread(getPort, getFilePath, packet.getFrom(), () -> usedPort[finalGetPortIndex] = -1);
             receiveThread.start();
-            usedPort[getPortIndex] = true;
+            usedPort[getPortIndex] = getSessionId;
           }
           break;
       }
@@ -105,7 +121,16 @@ public class Server implements Runnable {
 
   private int getFreePortIndex() {
     for (int i = 0; i < usedPort.length; i++) {
-      if (!usedPort[i]) {
+      if (usedPort[i] == -1) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private int getSessionPortIndex(int sessionId) {
+    for (int i = 0; i < usedPort.length; i++) {
+      if (usedPort[i] == sessionId) {
         return i;
       }
     }

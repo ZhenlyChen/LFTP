@@ -13,7 +13,7 @@ public class FileData {
     this.validChunks = new boolean[totalCount];
     this.savePath = dir + "./" +name;
     this.fileSize = fileSize;
-    FileIO.getDir(dir);
+    FileIO.checkDir(dir);
     FileIO.makeFile(savePath, fileSize);
   }
 

@@ -93,6 +93,7 @@ public class NetSocket implements AutoCloseable {
         continue;
       }
       ackPacket = new UDPPacket(seq++);
+      ackPacket.setACK(true);
       ackPacket.setAck(ackPacketNo);
       if (data.isFIN()) {
         ackPacket.setFIN(true);
@@ -159,7 +160,13 @@ public class NetSocket implements AutoCloseable {
       } else {
         packet = UDPReceiveBlock(2000);
       }
-      onACK(packet);
+      if (packet != null && packet.isACK()) {
+        onACK(packet);
+      } else { // 接收超时
+        ssthresh = cwnd / 2;
+        cwnd = ssthresh + 1;
+        dupACKCount = 0;
+      }
       if (timeoutInterval > (10 * 1000 * (long) (1000 * 1000))) { // 超时10秒
         System.out.println("[ERROR] Time out! Over!");
         break;
@@ -177,11 +184,11 @@ public class NetSocket implements AutoCloseable {
 
   // 接收到
   private void onACK(UDPPacket packet) {
-    if (packet != null && packet.isFIN()) {
+    if (packet.isFIN()) {
       sendPackets.clear();
       return;
     }
-    if (packet != null && packet.getAck() != sendPackets.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
+    if (packet.getAck() != sendPackets.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
       if (packet.getAck() == lastACK) {
         dupACKCount++;
         if (dupACKCount == 3) {
@@ -192,7 +199,7 @@ public class NetSocket implements AutoCloseable {
       ssthresh = (cwnd / 2) + 1;
       cwnd = ssthresh + 1; // 快速恢复
       lastACK = packet.getAck();
-    } else if (packet != null && packet.getAck() == sendPackets.getFirst().getSeq()) { // 收到正确的ACK
+    } else if (packet.getAck() == sendPackets.getFirst().getSeq()) { // 收到正确的ACK
       if (cwnd < ssthresh) { // 小于阈值
         cwnd *= 2; // TCP Tahoe
       } else { // 大于阈值
@@ -209,10 +216,6 @@ public class NetSocket implements AutoCloseable {
       if (sourcePacket.getCallBack() != null) {
         sourcePacket.getCallBack().success(packet);
       }
-    } else if (packet == null) { // 收到空包 TimeOut
-      ssthresh = cwnd / 2; // 阈值减半
-      cwnd = 1;
-      dupACKCount = 0;
     }
   }
 
@@ -227,7 +230,7 @@ public class NetSocket implements AutoCloseable {
   }
 
   private void UDPSend(UDPPacket packetData, InetSocketAddress to) throws IOException {
-    byte[] data = ByteConverter.getByte(packetData);
+    byte[] data = ByteConverter.getByte(packetData); // Max: 1321
     if (data == null) throw new IOException();
     if (blockMode) {
       if (to != null) {

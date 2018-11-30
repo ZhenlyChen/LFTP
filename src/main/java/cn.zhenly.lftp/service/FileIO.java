@@ -1,13 +1,10 @@
 package cn.zhenly.lftp.service;
 
-import cn.zhenly.lftp.net.FileData;
-
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FileIO {
-
+  private static int CHUNK_SIZE = 1024; // 默认块大小
+  // 生成占位文件
   public static void makeFile(String fileName, long size) {
     try {
       RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
@@ -18,8 +15,8 @@ public class FileIO {
     }
   }
 
+  // 写入文件指定块
   public static void writeFileChunk(String fileName, byte[] data, int index) {
-    int CHUNK_SIZE = 1024;
     try {
       RandomAccessFile out = new RandomAccessFile(fileName,"rw");
       out.skipBytes(index * CHUNK_SIZE);
@@ -30,8 +27,8 @@ public class FileIO {
     }
   }
 
+  // 读取文件指定块
   public static byte[] readFileChunk(String fileName, int index) {
-    int CHUNK_SIZE = 1024;
     byte[] buf = new byte[CHUNK_SIZE];
     try {
       File file = new File(fileName);
@@ -47,13 +44,14 @@ public class FileIO {
     return buf;
   }
 
+  // 获取文件块数
   public static int getFileChunkCount(String fileName) {
-    int CHUNK_SIZE = 1024;
     File file = new File(fileName);
     return (int) (file.length() / CHUNK_SIZE + (file.length() % CHUNK_SIZE == 0 ? 0 : 1));
   }
 
-  public static File getDir(String dir) {
+  // 检查文件夹是否存在
+  public static File checkDir(String dir) {
     File file = new File(dir);
     if (!file.exists()) {
       if (!file.mkdirs()) {

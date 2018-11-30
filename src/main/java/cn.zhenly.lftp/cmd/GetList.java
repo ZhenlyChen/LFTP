@@ -1,6 +1,5 @@
 package cn.zhenly.lftp.cmd;
 
-import cn.zhenly.lftp.net.AddressInfo;
 import cn.zhenly.lftp.net.NetSocket;
 import cn.zhenly.lftp.net.UDPPacket;
 import picocli.CommandLine.*;
@@ -16,7 +15,7 @@ public class GetList implements Runnable {
 
   @Override
   public void run() {
-    AddressInfo target = CmdParameter.parseIPAddr(server);
+    CmdParameter.AddressInfo target = CmdParameter.parseIPAddr(server);
     if (!target.valid) return;
     NetSocket netSocket;
     netSocket = new NetSocket(9000, new InetSocketAddress(target.ip, target.port), true);

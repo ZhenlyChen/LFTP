@@ -16,19 +16,19 @@ public class UDPPacket implements Serializable {
   private boolean FIN; // FIN标志位
   private byte[] data; // 数据包
 
-  public ACKCallBack getCallBack() {
+  ACKCallBack getCallBack() {
     return callBack;
   }
 
-  public void setCallBack(ACKCallBack callBack) {
+  void setCallBack(ACKCallBack callBack) {
     this.callBack = callBack;
   }
 
-  public long getTime() {
+  long getTime() {
     return time;
   }
 
-  public void setTime(long time) {
+  void setTime(long time) {
     this.time = time;
   }
 
@@ -36,15 +36,15 @@ public class UDPPacket implements Serializable {
     return from;
   }
 
-  public void setFrom(InetSocketAddress from) {
+  void setFrom(InetSocketAddress from) {
     this.from = from;
   }
 
-  public boolean isEND() {
+  boolean isEND() {
     return END;
   }
 
-  public void setEND(boolean END) {
+  void setEND(boolean END) {
     this.END = END;
   }
 
@@ -52,7 +52,7 @@ public class UDPPacket implements Serializable {
     void success(UDPPacket data);
   }
 
-  public UDPPacket(int seq) {
+  UDPPacket(int seq) {
     this.seq = seq;
   }
 
@@ -64,16 +64,16 @@ public class UDPPacket implements Serializable {
     this.data = data;
   }
 
-  public int getAck() {
+  int getAck() {
     return ack;
   }
 
-  public void setAck(int ack) {
+  void setAck(int ack) {
     this.ACK = true;
     this.ack = ack;
   }
 
-  public int getSeq() {
+  int getSeq() {
     return seq;
   }
 
@@ -85,15 +85,15 @@ public class UDPPacket implements Serializable {
     return ACK;
   }
 
-  public void setACK(boolean ACK) {
+  void setACK(boolean ACK) {
     this.ACK = ACK;
   }
 
-  public boolean isFIN() {
+  boolean isFIN() {
     return FIN;
   }
 
-  public void setFIN(boolean FIN) {
+  void setFIN(boolean FIN) {
     this.FIN = FIN;
   }
 

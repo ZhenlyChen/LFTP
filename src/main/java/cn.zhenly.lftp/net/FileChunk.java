@@ -8,7 +8,7 @@ public class FileChunk implements Serializable {
   private int id; // 分块ID
   private int count; // 分块数量
   private byte[] data; // 数据
-  private long size;
+  private long size; // 文件大小
 
   public FileChunk(String name, int id, int count, byte[] data, long size) {
     this.name = name;
