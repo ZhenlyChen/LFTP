@@ -7,7 +7,6 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Random;
 
-import cn.zhenly.lftp.net.Util;
 import cn.zhenly.lftp.service.FileNet;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -16,7 +15,7 @@ import picocli.CommandLine.Parameters;
 @Command(name = "lsend", mixinStandardHelpOptions = true, description = "Send file to server.")
 public class Send implements Runnable {
 
-  @Option(names = {"-s", "--server"}, description = "Server location.")
+  @Option(names = {"-s", "--server"}, description = "Server location.", defaultValue = "")
   private String server;
 
   @Parameters(description = "file path", defaultValue = "./data")
@@ -32,16 +31,20 @@ public class Send implements Runnable {
   public void run() {
     CmdParameter cmdParameter = new CmdParameter(server, files);
     CmdParameter.AddressInfo target = cmdParameter.target;
-
+    if (!target.valid) return;
     File file = new File(cmdParameter.fileName);
     if (!file.exists() || !file.isFile()) {
       System.out.printf("[ERROR] %s is not a file.%n", cmdParameter.fileName);
     }
-    try (NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true)) {
+    try {
+      NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true);
       int sessionId = new Random().nextInt(10000);
       netSocket.send(("SEND" + sessionId).getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());
-        if (port != -1) FileNet.sendFile(new NetSocket(sendPort,new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true, sessionId);
+        netSocket.close();
+        if (port != -1) {
+          FileNet.sendFile(new NetSocket(sendPort, new InetSocketAddress(target.ip, port), false), cmdParameter.fileName, true, sessionId);
+        }
       }, true, 0);
     } catch (Exception e) {
       e.printStackTrace();

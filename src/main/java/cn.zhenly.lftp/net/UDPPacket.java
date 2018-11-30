@@ -53,7 +53,7 @@ public class UDPPacket implements Serializable {
     return session;
   }
 
-  public void setSession(int session) {
+  void setSession(int session) {
     this.session = session;
   }
 
@@ -86,31 +86,27 @@ public class UDPPacket implements Serializable {
     return seq;
   }
 
-  public void setSeq(int seq) {
-    this.seq = seq;
-  }
-
-  public boolean isACK() {
+  boolean isACK() {
     return ACK;
   }
 
-  void setACK(boolean ACK) {
-    this.ACK = ACK;
+  void setACK() {
+    this.ACK = true;
   }
 
   boolean isFIN() {
     return FIN;
   }
 
-  void setFIN(boolean FIN) {
-    this.FIN = FIN;
+  void setFIN() {
+    this.FIN = true;
   }
 
-  public int getWinSize() {
+  int getWinSize() {
     return winSize;
   }
 
-  public void setWinSize(int winSize) {
+  void setWinSize(int winSize) {
     this.winSize = winSize;
   }
 

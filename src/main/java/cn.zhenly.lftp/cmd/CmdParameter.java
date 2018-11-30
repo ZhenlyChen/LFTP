@@ -51,6 +51,10 @@ class CmdParameter {
   static AddressInfo parseIPAddr(String ipStr) {
     AddressInfo info = new AddressInfo();
     info.valid = false;
+    if (ipStr.equals("")) {
+      System.out.printf("[ERROR] Invalid server location%n");
+      return info;
+    }
     String[] targetAddress = ipStr.split(":");
     // 解析端口
     if (targetAddress.length == 2) {

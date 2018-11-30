@@ -2,7 +2,6 @@ package cn.zhenly.lftp.service;
 
 import cn.zhenly.lftp.net.NetSocket;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 
 public class SendThread implements Runnable {

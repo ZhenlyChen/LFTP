@@ -1,7 +1,7 @@
-package cn.zhenly.lftp.net;
+package cn.zhenly.lftp.cmd;
 
-public class Util {
-  public static int getPortFromData(byte[] data) {
+class Util {
+  static int getPortFromData(byte[] data) {
     String str = new String(data);
     if (str.substring(0, 4).equals("BUYS")) {
       System.out.println("[ERROR] Server is buys now");

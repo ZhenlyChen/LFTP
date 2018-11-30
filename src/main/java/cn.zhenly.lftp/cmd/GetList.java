@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 @Command(name = "list", mixinStandardHelpOptions = true, description = "list files in server.")
 public class GetList implements Runnable {
 
-  @Option(names = {"-s", "--server"}, description = "Server location.")
+  @Option(names = {"-s", "--server"}, description = "Server location.", defaultValue = "")
   private String server;
 
   @Override

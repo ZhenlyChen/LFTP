@@ -6,6 +6,7 @@ import cn.zhenly.lftp.net.FileData;
 import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
+import java.util.concurrent.Semaphore;
 
 import static cn.zhenly.lftp.net.ByteConverter.getByte;
 
@@ -25,7 +26,7 @@ public class FileNet {
       if (fileChunk != null) {
         if (fileChunk.getId() == -1 && fileData == null) {
           fileData = new FileData(fileChunk.getName(), fileChunk.getCount(), dir, fileChunk.getSize());
-          System.out.println("[INFO] RecvFile " + fileChunk.getName() + " Chunks: " + fileChunk.getCount());
+          System.out.println("[INFO] RecvFile " + fileChunk.getName() + " Size: " + getSize(fileChunk.getCount() * 1024) );
           ack.setData("OK".getBytes());
           return ack;
         } else if (fileData != null) {
@@ -39,46 +40,66 @@ public class FileNet {
       }
       ack.setData("-1".getBytes());
       return ack;
-    }, 10000);
+    }, 20000);
     netSocket.close();
   }
 
   // 发送文件
   public static void sendFile(NetSocket netSocket, String filePath, boolean showPercentage, int session) {
-    FileIO.checkDir("./cache");
     File file = new File(filePath);
     int chunkCount = FileIO.getFileChunkCount(filePath);
-    boolean[] finishChunk = new boolean[chunkCount];
     Percentage percentage = new Percentage();
     FileChunk initChunk = new FileChunk(file.getName(), -1, chunkCount, new byte[1024], file.length());
+    Semaphore lock = new Semaphore(1);
+    try {
+      lock.acquire();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     netSocket.send(getByte(initChunk), data -> {
-      System.out.println("[INFO] Start to send file " + file.getName() + " (" + file.length() / 1024.0 + "KB)");
+      System.out.println("[INFO] Start to send file " + file.getName() + " (" + getSize(file.length()) + ")");
       if (new String(data.getData()).equals("OK")) {
-        for (int i = 0; i < chunkCount; i++) {
-          FileChunk fileChunk = new FileChunk(file.getName(), i, chunkCount, FileIO.readFileChunk(filePath, i), file.length());
-          netSocket.send(getByte(fileChunk), d -> {
-            int id = Integer.parseInt(new String(d.getData()));
-            if (id >= 0 && id < chunkCount) {
-              if (showPercentage) percentage.show((float) (id + 1) / chunkCount, file.length());
-              finishChunk[id] = true;
-              if (isFinishChunk(finishChunk, chunkCount)) {
-                // 断开连接
-                netSocket.disconnect(null);
+
+        // 分块加载文件
+        (new Thread(()->{
+          for (int i = 0; i < chunkCount; i++) {
+            FileChunk fileChunk = new FileChunk(file.getName(), i, chunkCount, FileIO.readFileChunk(filePath, i), file.length());
+            netSocket.send(getByte(fileChunk), d -> {
+              int id = Integer.parseInt(new String(d.getData()));
+              if (id >= 0 && id < chunkCount) {
+                if (showPercentage) percentage.show((float) (id + 1) / chunkCount, file.length());
+                // if (id > chunkCount - 100) System.out.println("id: " +id + "count: " + chunkCount);
+                if (id + 1 == chunkCount) {
+                  netSocket.disconnect(null);
+                  lock.release();
+                }
               }
-            }
-          }, false, session);
-        }
+            }, false, session);
+          }
+        })).start();
+
       } else {
         System.out.println("[ERROR] Can't connect to server");
       }
     }, true, session);
-    netSocket.close();
+    try {
+      lock.acquire();
+      lock.release();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
 
-  private static boolean isFinishChunk(boolean[] finishChunk, int size) {
-    for (int i = 0; i < size; i++) {
-      if (!finishChunk[i]) return false;
+
+  private static String getSize(long s) {
+    String[] unit = {"B", "KB", "MB", "GB", "TB"};
+    int i = 0;
+    double size = s;
+    while (size > 1024 && i < 5) {
+      size /= 1024;
+      i++;
     }
-    return true;
+    return (double)(Math.round(size*100))/100 + unit[i];
   }
+
 }

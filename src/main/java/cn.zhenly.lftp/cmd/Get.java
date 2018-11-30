@@ -1,7 +1,6 @@
 package cn.zhenly.lftp.cmd;
 
 import cn.zhenly.lftp.net.NetSocket;
-import cn.zhenly.lftp.net.Util;
 import cn.zhenly.lftp.service.FileIO;
 import cn.zhenly.lftp.service.FileNet;
 import picocli.CommandLine.*;
@@ -13,7 +12,7 @@ import java.util.Random;
 @Command(name = "lget", mixinStandardHelpOptions = true, description = "get file from server.")
 public class Get implements Runnable {
 
-  @Option(names = {"-s", "--server"}, description = "Server location.")
+  @Option(names = {"-s", "--server"}, description = "Server location.", defaultValue = "")
   private String server;
 
   @Option(names = {"-d", "--dir"}, description = "Save file dir.", defaultValue = "./download")
@@ -34,7 +33,8 @@ public class Get implements Runnable {
       return;
     }
     if (FileIO.checkDir(dir) == null) return;
-    try (NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true)) {
+    try {
+      NetSocket netSocket = new NetSocket(controlPort, new InetSocketAddress(target.ip, target.port), true);
       int sessionId = new Random().nextInt(10000);
       netSocket.send(("GETS" + sessionId + "-" + fileName).getBytes(), data -> {
         int port = Util.getPortFromData(data.getData());

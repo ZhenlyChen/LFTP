@@ -14,7 +14,11 @@ public class Main implements Runnable {
     cmd.addSubcommand("lsend", new Send());
     cmd.addSubcommand("lget", new Get());
     cmd.addSubcommand("list", new GetList());
-    cmd.parseWithHandler(new RunLast(), args);
+    try {
+      cmd.parseWithHandler(new RunLast(), args);
+    } catch (Exception ignored) {
+      System.out.println("Lack of parameter for " + args[args.length - 1]);
+    }
   }
 
   @Override
