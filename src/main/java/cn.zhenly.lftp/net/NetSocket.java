@@ -71,7 +71,7 @@ public class NetSocket implements AutoCloseable {
     this.sendThread = null;
     this.recvThread = null;
     this.ackPacketNo = 0;
-    this.timeoutInterval = 0;
+    this.timeoutInterval = 10 * 1000 * 1000; // 10ms
     this.seq = 0;
     this.cwnd = 1;
     this.ssthresh = 64;
