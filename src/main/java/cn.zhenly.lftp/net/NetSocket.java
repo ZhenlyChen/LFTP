@@ -34,21 +34,40 @@ public class NetSocket implements AutoCloseable {
   private Thread sendThread; // 发送线程
   private Thread recvThread; // 处理线程
 
-  public NetSocket(int port, boolean isBlockMode) {
+  public NetSocket(int port, boolean isBlockMode) throws IOException {
     blockMode = isBlockMode;
     this.selfPort = port;
     initSocket();
   }
 
-  public NetSocket(int port, InetSocketAddress target, boolean isBlockMode) {
+  public NetSocket(int port, InetSocketAddress target, boolean isBlockMode) throws IOException {
     blockMode = isBlockMode;
     this.selfPort = port;
     this.targetAddress = target;
     initSocket();
   }
 
+  // 切换非阻塞模式
+  public void switchToNonBlock() {
+    assert (this.blockMode);
+    this.blockMode = false;
+    socket.close();
+    try {
+      channel = DatagramChannel.open();
+      channel.configureBlocking(false);
+      channel.socket().bind(new InetSocketAddress(selfPort));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  // 设置目标地址
+  public void setTargetAddress(InetSocketAddress targetAddress) {
+    this.targetAddress = targetAddress;
+  }
+
   // 初始化自身socket
-  private void initSocket() {
+  private void initSocket() throws IOException {
     this.sendThread = null;
     this.recvThread = null;
     this.ackPacketNo = 0;
@@ -59,18 +78,14 @@ public class NetSocket implements AutoCloseable {
     this.sendPackets = new LinkedList<>();
     this.receivePackets = new LinkedList<>();
     this.sendingPacket = new LinkedList<>();
-    try {
-      System.out.println("[INFO] Port " + selfPort + " is Listening.");
-      if (blockMode) {
-        socket = new DatagramSocket(selfPort);
-      } else {
-        channel = DatagramChannel.open();
-        channel.configureBlocking(false);
-        channel.socket().bind(new InetSocketAddress(selfPort));
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
+    if (blockMode) {
+      socket = new DatagramSocket(selfPort);
+    } else {
+      channel = DatagramChannel.open();
+      channel.configureBlocking(false);
+      channel.socket().bind(new InetSocketAddress(selfPort));
     }
+    System.out.println("[INFO] Listening in port " + selfPort);
   }
 
   @Override
@@ -94,33 +109,42 @@ public class NetSocket implements AutoCloseable {
     while (true) {
       UDPPacket data = UDPReceiveBlock(timeout);
       if (data == null) {
-        System.out.println("Listen time out!");
+        System.out.println("[ERROR] Timeout! Listening over!");
         break;
       }
       if (data.isEND()) {
         ackPacketNo = -1;
       }
       UDPPacket ackPacket;
+      boolean validPacket = false;
       if (ackPacketNo == -1) { // 新的数据
         ackPacketNo = data.getSeq();
+        validPacket = true;
       } else if (ackPacketNo + 1 == data.getSeq()) { // 正确数据
         ackPacketNo++;
-      } else if (ackPacketNo > data.getSeq()) { // 失序数据
-        continue;
+        validPacket = true;
       }
+      // System.out.println("Get: " + data.getSeq() + ", Want: "+ ackPacketNo);
       // 发送确认ACK报文
       ackPacket = new UDPPacket(seq++);
-      ackPacket.setACK();
       ackPacket.setAck(ackPacketNo);
       if (data.isFIN()) {
         ackPacket.setFIN();
-      } else {
+      } else if (validPacket) {
         ackPacket = callBack.Receive(data, ackPacket);
+        if (!blockMode) {
+          // 切换非阻塞模式
+          break;
+        }
       }
       try {
         UDPSend(ackPacket, data.getFrom());
       } catch (IOException e) {
         e.printStackTrace();
+      }
+      if (ackPacket.getCallBack() != null) {
+        ackPacket.getCallBack().success(null);
+        break;
       }
       if (data.isFIN()) {
         break;
@@ -138,6 +162,7 @@ public class NetSocket implements AutoCloseable {
     addPackToSendQueue(packet);
   }
 
+  // 将发送数据加入缓存
   public void send(byte[] content, UDPPacket.ACKCallBack callBack) {
     UDPPacket packet = new UDPPacket(seq++);
     packet.setCallBack(callBack);
@@ -153,17 +178,17 @@ public class NetSocket implements AutoCloseable {
     try {
       // 发送缓存信号量
       semaphoreSend.acquire();
-      sendBuffRWLock.writeLock().lock();
-      // 添加发送数据到缓存中
-      this.sendPackets.add(packet);
-      sendBuffRWLock.writeLock().unlock();
-      // 启动发送线程
-      if (sendThread == null || !sendThread.isAlive()) {
-        this.sendThread = new Thread(this::sendPacket);
-        sendThread.start();
-      }
     } catch (InterruptedException e) {
       e.printStackTrace();
+    }
+    sendBuffRWLock.writeLock().lock();
+    // 添加发送数据到缓存中
+    this.sendPackets.add(packet);
+    sendBuffRWLock.writeLock().unlock();
+    // 启动发送线程
+    if (sendThread == null || !sendThread.isAlive()) {
+      this.sendThread = new Thread(this::sendPacket);
+      sendThread.start();
     }
   }
 
@@ -179,9 +204,14 @@ public class NetSocket implements AutoCloseable {
   }
 
   private void sendPacket() {
+    // System.out.println("Begin send");
     // 记录上一次ACK的时间
     long lastACKTime = System.nanoTime();
     while (true) {
+      if (blockMode && socket.isClosed() || !blockMode && channel.socket().isClosed()) {
+        System.out.println("[ERROR] Socket is closed");
+        break;
+      }
       boolean goodbye = false;
       sendBuffRWLock.writeLock().lock();
       while (sendingPacket.size() <= cwnd && sendPackets.size() > 0) {
@@ -189,7 +219,7 @@ public class NetSocket implements AutoCloseable {
         semaphoreSend.release();
       }
       sendBuffRWLock.writeLock().unlock();
-
+      // System.out.println("Sending: " + sendingPacket.size() + ", Ready:" + sendPackets.size());
       for (int i = 0; i < sendingPacket.size(); i++) {
         try {
           UDPPacket packet = sendingPacket.get(i);
@@ -237,7 +267,7 @@ public class NetSocket implements AutoCloseable {
         this.close();
         break;
       }
-      // 第一个包是否已经超时
+      // 是否已经超时
       if (sendingPacket.size() != 0) {
         ssthresh = cwnd / 2;
         cwnd = ssthresh + 1;
@@ -245,15 +275,17 @@ public class NetSocket implements AutoCloseable {
       }
     }
     if (sendPackets.size() != 0) sendPacket();
+    // System.out.println("End send");
   }
 
   // 接收到ACK
   private void onACK(UDPPacket packet) {
+    // System.out.println("Want: " + sendingPacket.getFirst().getSeq() + ", Get: "+ packet.getAck());
     if (packet.isFIN()) {
       sendingPacket.clear();
       return;
     }
-    if (packet.getAck() != sendingPacket.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
+    if (packet.getAck() < sendingPacket.getFirst().getSeq()) { // 非 ACK 或 不正确的ACK 序号
       if (packet.getAck() == lastACK) {
         dupACKCount++;
         if (dupACKCount == 3) {
@@ -264,27 +296,29 @@ public class NetSocket implements AutoCloseable {
       ssthresh = (cwnd / 2) + 1;
       cwnd = ssthresh + 1; // 快速恢复
       lastACK = packet.getAck();
-    } else if (packet.getAck() == sendingPacket.getFirst().getSeq()) { // 收到正确的ACK
-      if (cwnd < ssthresh) { // 小于阈值
-        cwnd *= 2; // TCP Tahoe
-      } else { // 大于阈值
-        cwnd++; // TCP Reno
-      }
-      lastACK = packet.getAck();
-      dupACKCount = 0;
-      if (sendingPacket.size() == 0) {
-        System.out.println("[ERROR] System Error! Null Buffer!");
-        return;
-      }
-      if (packet.getWinSize() < 100) { // 接收缓冲区快满了
-        ssthresh = (cwnd / 2) + 1; // 减少发送窗口
-        cwnd = ssthresh + 1;
-      }
-      UDPPacket sourcePacket = sendingPacket.removeFirst();
-      updateRTT((System.nanoTime()) - sourcePacket.getTime()); // 估计 RTT
-      if (sourcePacket.getCallBack() != null) {
-        packet.setCallBack(sourcePacket.getCallBack());
-        addPackToRecvQueue(packet);
+    } else {
+      while (sendingPacket.size() != 0 && packet.getAck() >= sendingPacket.getFirst().getSeq()) { // 收到正确的ACK
+        if (cwnd < ssthresh) { // 小于阈值
+          cwnd *= 2; // TCP Tahoe
+        } else { // 大于阈值
+          cwnd++; // TCP Reno
+        }
+        lastACK = packet.getAck();
+        dupACKCount = 0;
+        if (sendingPacket.size() == 0) {
+          System.out.println("[ERROR] System Error! Null Buffer!");
+          return;
+        }
+//      if (packet.getWinSize() < 100) { // 接收缓冲区快满了
+//        ssthresh = (cwnd / 2) + 1; // 减少发送窗口
+//        cwnd = ssthresh + 1;
+//      }
+        UDPPacket sourcePacket = sendingPacket.removeFirst();
+        updateRTT((System.nanoTime()) - sourcePacket.getTime()); // 估计 RTT
+        if (sourcePacket.getCallBack() != null) {
+          packet.setCallBack(sourcePacket.getCallBack());
+          addPackToRecvQueue(packet);
+        }
       }
     }
   }
@@ -292,12 +326,12 @@ public class NetSocket implements AutoCloseable {
 
   // 处理接收包
   private void dealRecvPacket() {
-    recvBuffRWLock.writeLock().lock();
     while (receivePackets.size() > 0) {
+      recvBuffRWLock.writeLock().lock();
       UDPPacket packet = receivePackets.removeFirst();
+      recvBuffRWLock.writeLock().unlock();
       packet.getCallBack().success(packet);
     }
-    recvBuffRWLock.writeLock().unlock();
   }
 
   // 修改RTT估计值
@@ -324,6 +358,7 @@ public class NetSocket implements AutoCloseable {
     } else {
       ByteBuffer buffer = ByteBuffer.wrap(data);
       if (to == null) {
+        // System.out.println("send" + targetAddress.getAddress().getHostAddress() + ":" + targetAddress.getPort());
         channel.send(buffer, targetAddress);
       } else {
         channel.send(buffer, to);
@@ -345,6 +380,7 @@ public class NetSocket implements AutoCloseable {
       }
       return packet;
     } catch (IOException e) {
+      // e.printStackTrace();
       return null;
     }
   }

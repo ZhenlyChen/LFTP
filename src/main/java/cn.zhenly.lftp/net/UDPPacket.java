@@ -21,7 +21,7 @@ public class UDPPacket implements Serializable {
     return callBack;
   }
 
-  void setCallBack(ACKCallBack callBack) {
+  public void setCallBack(ACKCallBack callBack) {
     this.callBack = callBack;
   }
 
@@ -88,10 +88,6 @@ public class UDPPacket implements Serializable {
 
   boolean isACK() {
     return ACK;
-  }
-
-  void setACK() {
-    this.ACK = true;
   }
 
   boolean isFIN() {

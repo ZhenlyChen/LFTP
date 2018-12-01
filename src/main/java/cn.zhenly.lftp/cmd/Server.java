@@ -2,11 +2,13 @@ package cn.zhenly.lftp.cmd;
 
 import cn.zhenly.lftp.net.NetSocket;
 import cn.zhenly.lftp.service.FileIO;
+import cn.zhenly.lftp.service.FileNet;
 import cn.zhenly.lftp.service.ReceiveThread;
 import cn.zhenly.lftp.service.SendThread;
 import picocli.CommandLine.*;
 
 import java.io.File;
+import java.io.IOException;
 
 import static cn.zhenly.lftp.cmd.CmdParameter.isPortAvailable;
 
@@ -19,19 +21,23 @@ public class Server implements Runnable {
   @Option(names = {"-s", "--start"}, description = "Start port pool", defaultValue = "20480")
   private int portPoolStart;
 
-  @Option(names = {"-c", "--client"}, description = "The number of clients at the same time.", defaultValue = "10")
+  @Option(names = {"-c", "--client"}, description = "The number of clients at the same time.", defaultValue = "20")
   private int clientCount;
 
-  @Option(names = {"-d", "--dir"}, description = "Server dir dir.", defaultValue = "./serverData")
+  @Option(names = {"-d", "--dir"}, description = "Server data folder.", defaultValue = "./serverData")
   private String dir;
 
   private int[] usedPort;
 
-
   @Override
   public void run() {
+
     if (dir == null) {
       System.out.println("[ERROR] invalid dir");
+      return;
+    }
+    if (!isPortAvailable(port)) {
+      System.out.println("[ERROR] Port " + port + " is using.");
       return;
     }
     for (int i = portPoolStart; i < portPoolStart + clientCount; i++) {
@@ -40,15 +46,21 @@ public class Server implements Runnable {
         return;
       }
     }
-    System.out.println("[INFO] Start port pool: " + portPoolStart);
-    System.out.println("[INFO] End port pool: " + (portPoolStart + clientCount - 1));
+    System.out.println("[INFO] Port pool: " + portPoolStart + " - " + (portPoolStart + clientCount - 1));
+    // 初始化地址池
     this.usedPort = new int[clientCount];
     for (int i = 0; i < clientCount; i++) {
       this.usedPort[i] = -1;
     }
     File file = FileIO.checkDir(dir);
     if (file == null) return;
-    NetSocket netSocket = new NetSocket(port, true);
+    NetSocket netSocket;
+    try {
+      netSocket = new NetSocket(port, true);
+    } catch (IOException e) {
+      System.out.println("[ERROR] Port " + port + " already in use!");
+      return;
+    }
     System.out.println("[INFO] Listening in localhost:" + port);
     netSocket.listen((packet, ack) -> {
       String recStr = new String(packet.getData());
@@ -61,7 +73,7 @@ public class Server implements Runnable {
           StringBuilder sb = new StringBuilder();
           for (File f : fileList) {
             if (f.isFile()) {
-              sb.append(f.getName()).append("-----").append(f.length() / 1024).append("KB\n");
+              sb.append(f.getName()).append("-----").append(FileNet.getSize(f.length())).append("\n");
             }
           }
           ack.setData(sb.toString().getBytes());
@@ -76,10 +88,10 @@ public class Server implements Runnable {
           }
           int sendPortIndex = getSessionPortIndex(sendSessionId);
           if (sendPortIndex == -1) sendPortIndex = getFreePortIndex();
-          if (sendPortIndex == -1) {
+          int sendPort = portPoolStart + sendPortIndex;
+          if (sendPortIndex == -1 || !isPortAvailable(sendPort)) {
             ack.setData("BUSY".getBytes());
           } else {
-            int sendPort = portPoolStart + sendPortIndex;
             ack.setData(("PORT" + sendPort).getBytes());
             int finalSendPortIndex = sendPortIndex;
             ReceiveThread receiveThread = new ReceiveThread(sendSessionId, sendPort, dir, () -> usedPort[finalSendPortIndex] = -1);
@@ -97,19 +109,21 @@ public class Server implements Runnable {
           // 从端口池中新开端口，等待客户端连接
           int getPortIndex = getSessionPortIndex(getSessionId);
           if (getPortIndex == -1) getPortIndex = getFreePortIndex();
-          if (getPortIndex == -1) {
+          int getPort = portPoolStart + getPortIndex;
+          if (getPortIndex == -1 || !isPortAvailable(getPort)) {
             ack.setData("BUSY".getBytes());
           } else {
-            int getPort = portPoolStart + getPortIndex;
             ack.setData(("PORT" + getPort).getBytes());
-            String getFilePath = dir + "./" + recStr.substring(recStr.indexOf('-') + 1);
+            String getFilePath = dir + "/" + recStr.substring(recStr.indexOf('-') + 1);
             File fileOfSend = new File(getFilePath);
             if (!fileOfSend.exists() || !fileOfSend.isFile()) {
               System.out.printf("[ERROR] %s is not a file.%n", getFilePath);
+              ack.setData("NOTHING".getBytes());
+              return ack;
             }
-            int finalGetPortIndex= getPortIndex;
+            int finalGetPortIndex = getPortIndex;
             SendThread receiveThread =
-                    new SendThread(getSessionId, getPort, getFilePath, packet.getFrom(), () -> usedPort[finalGetPortIndex] = -1);
+                    new SendThread(getSessionId, getPort, getFilePath, () -> usedPort[finalGetPortIndex] = -1);
             receiveThread.start();
             usedPort[getPortIndex] = getSessionId;
           }

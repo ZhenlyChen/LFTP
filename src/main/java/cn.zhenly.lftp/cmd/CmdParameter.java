@@ -8,7 +8,7 @@ import java.util.List;
 
 class CmdParameter {
 
-  public static class AddressInfo {
+  static class AddressInfo {
     InetAddress ip;
     int port;
     boolean valid;

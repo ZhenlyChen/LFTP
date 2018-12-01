@@ -11,9 +11,8 @@ public class FileData {
   public FileData(String name, int totalCount, String dir, long fileSize) {
     this.totalCount = totalCount;
     this.validChunks = new boolean[totalCount];
-    this.savePath = dir + "./" +name;
+    this.savePath = dir + "/" + name;
     this.fileSize = fileSize;
-    FileIO.checkDir(dir);
     FileIO.makeFile(savePath, fileSize);
   }
 

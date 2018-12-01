@@ -7,12 +7,14 @@ import cn.zhenly.lftp.net.NetSocket;
 
 import java.io.File;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static cn.zhenly.lftp.net.ByteConverter.getByte;
 
 
 public class FileNet {
   private static FileData fileData;
+
   // 监听接受文件
   public static void listenReceiveFile(NetSocket netSocket, String dir, boolean showPercentage, int session) {
     Percentage percentage = new Percentage();
@@ -26,21 +28,23 @@ public class FileNet {
       if (fileChunk != null) {
         if (fileChunk.getId() == -1 && fileData == null) {
           fileData = new FileData(fileChunk.getName(), fileChunk.getCount(), dir, fileChunk.getSize());
-          System.out.println("[INFO] RecvFile " + fileChunk.getName() + " Size: " + getSize(fileChunk.getCount() * 1024) );
+          System.out.println("[INFO] RecvFile " + fileChunk.getName() + " Size: " + getSize(fileChunk.getCount() * 1024));
           ack.setData("OK".getBytes());
           return ack;
         } else if (fileData != null) {
           if (showPercentage)
             percentage.show((float) (fileChunk.getId() + 1) / fileChunk.getCount(), fileChunk.getCount() * 1024);
+          if (fileChunk.getId() + 1 >= fileChunk.getCount()) {
+            ack.setCallBack(d -> System.out.println("[INFO] Finish!"));
+          }
           if (fileData.addChunk(fileChunk)) {
-            ack.setData(String.valueOf(fileChunk.getId()).getBytes());
             return ack;
           }
         }
       }
       ack.setData("-1".getBytes());
       return ack;
-    }, 20000);
+    }, 15000);
     netSocket.close();
   }
 
@@ -56,23 +60,22 @@ public class FileNet {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+    AtomicInteger chunkIndex = new AtomicInteger(0);
     netSocket.send(getByte(initChunk), data -> {
       System.out.println("[INFO] Start to send file " + file.getName() + " (" + getSize(file.length()) + ")");
       if (new String(data.getData()).equals("OK")) {
 
         // 分块加载文件
-        (new Thread(()->{
+        (new Thread(() -> {
           for (int i = 0; i < chunkCount; i++) {
             FileChunk fileChunk = new FileChunk(file.getName(), i, chunkCount, FileIO.readFileChunk(filePath, i), file.length());
             netSocket.send(getByte(fileChunk), d -> {
-              int id = Integer.parseInt(new String(d.getData()));
-              if (id >= 0 && id < chunkCount) {
-                if (showPercentage) percentage.show((float) (id + 1) / chunkCount, file.length());
-                // if (id > chunkCount - 100) System.out.println("id: " +id + "count: " + chunkCount);
-                if (id + 1 == chunkCount) {
-                  netSocket.disconnect();
-                  lock.release();
-                }
+              int id = chunkIndex.incrementAndGet();
+              if (showPercentage) percentage.show((float) (id) / chunkCount, file.length());
+              if (id >= chunkCount) {
+                System.out.println("[INFO] Finish!");
+                netSocket.disconnect();
+                lock.release();
               }
             }, false, session);
           }
@@ -91,7 +94,7 @@ public class FileNet {
   }
 
 
-  private static String getSize(long s) {
+  public static String getSize(long s) {
     String[] unit = {"B", "KB", "MB", "GB", "TB"};
     int i = 0;
     double size = s;
@@ -99,7 +102,7 @@ public class FileNet {
       size /= 1024;
       i++;
     }
-    return (double)(Math.round(size*100))/100 + unit[i];
+    return (double) (Math.round(size * 100)) / 100 + unit[i];
   }
 
 }

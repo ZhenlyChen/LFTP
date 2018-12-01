@@ -2,6 +2,8 @@ package cn.zhenly.lftp.service;
 
 import cn.zhenly.lftp.net.NetSocket;
 
+import java.io.IOException;
+
 public class ReceiveThread implements Runnable {
   private int port;
   private int session;
@@ -22,7 +24,12 @@ public class ReceiveThread implements Runnable {
 
   @Override
   public void run() {
-    FileNet.listenReceiveFile(new NetSocket(port, true), dir, false ,session);
+    try {
+      NetSocket netSocket = new NetSocket(port, true);
+      FileNet.listenReceiveFile(netSocket, dir, false ,session);
+    } catch (IOException e) {
+      System.out.println("[ERROR] Port "+ port + " already in use!");
+    }
     callbackEnd.finish();
   }
 

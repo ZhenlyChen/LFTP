@@ -15,6 +15,22 @@ public class FileIO {
     }
   }
 
+  // 检查文件夹是否存在
+  public static File checkDir(String dir) {
+    File file = new File(dir);
+    if (!file.exists()) {
+      if (!file.mkdirs()) {
+        System.out.println("[ERROR] Can't make directory " + dir + ".");
+        return null;
+      }
+    } else if (!file.isDirectory()) {
+      System.out.println("[ERROR] File " + dir + " has exist, can't create directory here.");
+      return null;
+    }
+    System.out.println("[INFO] Data directory: " + dir);
+    return file;
+  }
+
   // 写入文件指定块
   public static void writeFileChunk(String fileName, byte[] data, int index) {
     try {
@@ -28,7 +44,7 @@ public class FileIO {
   }
 
   // 读取文件指定块
-  public static byte[] readFileChunk(String fileName, int index) {
+  static byte[] readFileChunk(String fileName, int index) {
     byte[] buf = new byte[CHUNK_SIZE];
     try {
       File file = new File(fileName);
@@ -45,24 +61,9 @@ public class FileIO {
   }
 
   // 获取文件块数
-  public static int getFileChunkCount(String fileName) {
+  static int getFileChunkCount(String fileName) {
     File file = new File(fileName);
     return (int) (file.length() / CHUNK_SIZE + (file.length() % CHUNK_SIZE == 0 ? 0 : 1));
   }
 
-  // 检查文件夹是否存在
-  public static File checkDir(String dir) {
-    File file = new File(dir);
-    if (!file.exists()) {
-      if (!file.mkdirs()) {
-        System.out.println("[ERROR] Can't make directory " + dir + ".");
-        return null;
-      }
-    } else if (!file.isDirectory()) {
-      System.out.println("[ERROR] File " + dir + " has exist, can't create directory here.");
-      return null;
-    }
-    System.out.println("[INFO] Data directory: " + dir);
-    return file;
-  }
 }
