@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import static cn.zhenly.lftp.cmd.CmdParameter.isPortAvailable;
 
-@Command(name = "server", mixinStandardHelpOptions = true, description = "Send and receive big file by udp.")
+@Command(name = "server", mixinStandardHelpOptions = true, description = "Send and receive large file by udp.")
 public class Server implements Runnable {
 
   @Option(names = {"-p", "--port"}, description = "Server listen port.", defaultValue = "3000")

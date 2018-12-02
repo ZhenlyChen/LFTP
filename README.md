@@ -1,27 +1,25 @@
 # LFTP
 
-Send and receive big file by UDP
+Send and receive large file by UDP
 
 ![lftp](./docs/Test-doc/large.gif)
-
-
 
 ## Usage
 
 ```bash
 Usage: lftp [-hV] [COMMAND]
-Send and receive big file by udp.
+Send and receive large file by udp.
   -h, --help      Show this help message and exit.
   -V, --version   Print version information and exit.
 Commands:
-  server  Send and receive big file by udp.
+  server  Send and receive large file by udp.
   lsend   Send file to server.
   lget    Get file from server.
   list    Get file list in server.
 
 Usage: lftp server [-hV] [-c=<clientCount>] [-d=<dir>] [-p=<port>]
                    [-s=<portPoolStart>]
-Send and receive big file by udp.
+Send and receive large file by udp.
   -c, --client=<clientCount>
                       The number of clients at the same time.
   -d, --dir=<dir>     Server data folder.
@@ -74,13 +72,9 @@ $ java -jar lftp.jar lget -s 127.0.0.1:3000 -d ./data test.txt
 $ java -jar lftp.jar list -s 127.0.0.1:3000
 ```
 
-
-
 ## Design
 
 [Design-doc.md](./docs/Design-doc.md)
-
-
 
 ## Test
 

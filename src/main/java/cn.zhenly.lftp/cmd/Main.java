@@ -5,7 +5,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.RunLast;
 
 
-@Command(name = "lftp", mixinStandardHelpOptions = true, version = "lftp v0.0.1", description = "Send and receive big file by udp.")
+@Command(name = "lftp", mixinStandardHelpOptions = true, version = "lftp v0.0.1", description = "Send and receive large file by udp.")
 public class Main implements Runnable {
 
   public static void main(String[] args) {
