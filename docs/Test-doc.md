@@ -319,3 +319,48 @@ CRC32：C933524D
 ## 流量控制测试
 
 因为接收者处理数据以及写入文件的速度是远大于网络速度的，因此这一部分比较难测试出来。
+
+
+
+## 超大文件测试
+
+上面的测试都是一些小文件，这里尝试
+
+这里尝试传输一个大于2GB的文件
+
+选择一个`3.52GB`的镜像文件在局域网内传输，客户端向服务端发送，速度可达`12.36MB/s`
+
+![Snipaste_2018-12-02_20-54-03](Test-doc/Snipaste_2018-12-02_20-54-03.jpg)
+
+查看其内存占用，即使是`3.52GB`的文件，其占用的内存也不会太多，仅仅为100多MB
+
+![Snipaste_2018-12-02_20-57-00](Test-doc/Snipaste_2018-12-02_20-57-00.jpg)
+
+完全接收之后一共花了不到5分钟
+
+![Snipaste_2018-12-02_20-57-29](Test-doc/Snipaste_2018-12-02_20-57-29.jpg)
+
+服务端也显示传输完毕
+
+![Snipaste_2018-12-02_20-57-42](Test-doc/Snipaste_2018-12-02_20-57-42.jpg)
+
+检测哈希值，服务端和客户端的文件是完全一致的
+
+```bash
+文件：	D:\Project\ZhenlyChen\LFTP\out\artifacts\lftp_main_jar\serverData\office.img
+大小：	3, 775, 004, 672 字节
+修改时间：2018-12-02 20:57:24
+MD5：	D3829ED21798020734C679A57F7D6039
+SHA1：	2A5AA62DEA78C5073775684FCEBE56405AF52F24
+CRC32：C06CB3FB
+
+
+文件：	D:\Project\ZhenlyChen\LFTP\out\artifacts\lftp_main_jar\data\office.img
+大小：	3, 775, 004, 672 字节
+修改时间：2018-09-30 22:57:03
+MD5：	D3829ED21798020734C679A57F7D6039
+SHA1：	2A5AA62DEA78C5073775684FCEBE56405AF52F24
+CRC32：C06CB3FB
+```
+
+大文件测试通过

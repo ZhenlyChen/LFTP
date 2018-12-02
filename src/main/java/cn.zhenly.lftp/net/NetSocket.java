@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NetSocket implements AutoCloseable {
-  private final static int MAX_BUFFER_SIZE = 4096; // 最多可以读取4M数据
+  private final static int MAX_BUFFER_SIZE = 20480; // 最多可以读取20M数据
   private final Semaphore semaphoreSend = new Semaphore(MAX_BUFFER_SIZE); // 信号量(防止一次性读取太多数据到内存中)
   private int seq; // 包序号
   private int selfPort; // 自身端口号
@@ -342,7 +342,7 @@ public class NetSocket implements AutoCloseable {
     if (this.devRTT == 0) this.devRTT = rtt;
     double b = 0.25;
     this.devRTT = (long) ((1 - b) * this.devRTT + b * Math.abs(this.estimateRTT - rtt));
-    this.timeoutInterval = this.estimateRTT + 4 * this.devRTT;
+    this.timeoutInterval = this.estimateRTT + 5 * this.devRTT;
   }
 
   // 封包发送

@@ -1,19 +1,11 @@
 package cn.zhenly.lftp.service;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileIO {
   private static int CHUNK_SIZE = 1024; // 默认块大小
-  // 生成占位文件
-  public static void makeFile(String fileName, long size) {
-    try {
-      RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-      raf.setLength(size);
-      raf.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
 
   // 检查文件夹是否存在
   public static File checkDir(String dir) {
@@ -31,39 +23,63 @@ public class FileIO {
     return file;
   }
 
-  // 写入文件指定块
-  public static void writeFileChunk(String fileName, byte[] data, int index) {
+  //------------高性能文件IO---------------
+
+  // 初始化文件
+  public static void initFile(String fileName) {
     try {
-      RandomAccessFile out = new RandomAccessFile(fileName,"rw");
-      out.skipBytes(index * CHUNK_SIZE);
-      out.write(data);
-      out.close();
+      RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
+      raf.setLength(0);
+      raf.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
 
-  // 读取文件指定块
-  static byte[] readFileChunk(String fileName, int index) {
-    byte[] buf = new byte[CHUNK_SIZE];
+  //  连续追加写入
+  public static void writeFileAppend(String fileName, List<byte[]> chunks) {
+    // System.out.println("Write " + fileName + ",count:" + chunks.size());
     try {
-      File file = new File(fileName);
-      int chunks = (int) (file.length() / CHUNK_SIZE + (file.length() % CHUNK_SIZE == 0 ? 0 : 1));
-      if (index >= chunks) return buf;
-      InputStream inStream = new FileInputStream(file);
-      long skip = inStream.skip(index * CHUNK_SIZE);
-      if (skip != index * CHUNK_SIZE) return buf;
-      int res = inStream.read(buf);
+      OutputStream outStream = new FileOutputStream(fileName, true);
+      for (byte[] b: chunks) {
+        outStream.write(b);
+      }
+      outStream.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return buf;
+
+  }
+
+  // 连续读取
+  static List<byte[]> readFile(String fileName, long beginChunk, int chunkCount) {
+    // System.out.println("Read " + fileName + ",begin:" + beginChunk + ", count:" + chunkCount);
+    List<byte[]> fileChunks = new ArrayList<>();
+    try {
+      FileInputStream inStream = new FileInputStream(fileName);
+      // System.out.println("Skip: " + beginChunk * CHUNK_SIZE);
+      long skip = inStream.skip(beginChunk * CHUNK_SIZE);
+      if (skip != beginChunk * CHUNK_SIZE) {
+        System.out.println("[ERROR] Invalid Skip " + skip + " for " + beginChunk * CHUNK_SIZE);
+      }
+      while (chunkCount > 0) {
+        byte[] buf = new byte[1024];
+        int r = inStream.read(buf);
+        fileChunks.add(buf);
+        chunkCount--;
+      }
+      inStream.close();
+      return fileChunks;
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return fileChunks;
   }
 
   // 获取文件块数
-  static int getFileChunkCount(String fileName) {
+  static long getFileChunkCount(String fileName) {
     File file = new File(fileName);
-    return (int) (file.length() / CHUNK_SIZE + (file.length() % CHUNK_SIZE == 0 ? 0 : 1));
+    return file.length() / CHUNK_SIZE + (file.length() % CHUNK_SIZE == 0 ? 0 : 1);
   }
 
 }
