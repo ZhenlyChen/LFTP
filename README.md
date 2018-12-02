@@ -88,6 +88,22 @@ $ java -jar lftp.jar list -s 127.0.0.1:3000
 
 ## Release
 
+[LFTP V1.0.1](https://github.com/ZhenlyChen/LFTP/releases/tag/1.0.1)
+
+- 添加超大文件测试
+
+- 改进文件IO方法，提高写入速度，以更大粒度读取文件，增加IO缓存
+
+- 改进进度条占用资源和显示
+
+- 减少文件传输时资源消耗
+
+- 修复不能支持2GB以上文件的BUG
+
+- 增加发送缓冲区大小
+
+- 修复一些小问题
+
 [LFTP V1.0.0](https://github.com/ZhenlyChen/LFTP/releases/tag/1.0.0)
 
-[LFTP V1.0.1](https://github.com/ZhenlyChen/LFTP/releases/tag/1.0.1)
+- 基本功能实现
