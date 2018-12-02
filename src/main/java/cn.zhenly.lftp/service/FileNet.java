@@ -34,7 +34,7 @@ public class FileNet {
           return ack;
         } else if (fileChunk.getId() != -1 && fileData.isInitialized()) {
           long totalCount = fileData.getTotalCount();
-          if (showPercentage && (fileChunk.getId() % 300 == 0 || fileChunk.getId() - 100 > totalCount))
+          if (showPercentage && (fileChunk.getId() % 300 == 0 || fileChunk.getId() + 100 > totalCount))
             percentage.show((float) (fileChunk.getId() + 1) / totalCount, totalCount * 1024);
           fileData.addChunk(fileChunk);
           if (fileChunk.getId() + 1 >= totalCount) {
@@ -78,7 +78,7 @@ public class FileNet {
               FileChunk fileChunk = new FileChunk(i+j,  fileChunks.get(j));
               netSocket.send(getByte(fileChunk), ignore -> {
                 int id = chunkIndex.incrementAndGet();
-                if (showPercentage && (fileChunk.getId() % 300 == 0 || fileChunk.getId() - 100 > chunkCount))
+                if (showPercentage && (id % 300 == 0 || id + 100 > chunkCount))
                   percentage.show((float) (id) / chunkCount, file.length());
                 if (id >= chunkCount) {
                   System.out.println("\n[INFO] Finish!");
