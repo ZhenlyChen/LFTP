@@ -89,3 +89,5 @@ $ java -jar lftp.jar list -s 127.0.0.1:3000
 ## Release
 
 [LFTP V1.0.0](https://github.com/ZhenlyChen/LFTP/releases/tag/1.0.0)
+
+[LFTP V1.0.1](https://github.com/ZhenlyChen/LFTP/releases/tag/1.0.1)
