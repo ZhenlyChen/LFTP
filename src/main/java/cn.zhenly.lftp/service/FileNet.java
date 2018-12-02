@@ -39,7 +39,7 @@ public class FileNet {
           fileData.addChunk(fileChunk);
           if (fileChunk.getId() + 1 >= totalCount) {
             fileData.flush();
-            ack.setCallBack(d -> System.out.println("\n[INFO] Finish!"));
+            ack.setCallBack(d -> System.out.println("[INFO] Finish!"));
           }
           return ack;
         }
@@ -81,7 +81,7 @@ public class FileNet {
                 if (showPercentage && (id % 300 == 0 || id + 100 > chunkCount))
                   percentage.show((float) (id) / chunkCount, file.length());
                 if (id >= chunkCount) {
-                  System.out.println("\n[INFO] Finish!");
+                  System.out.println("[INFO] Finish!");
                   netSocket.disconnect();
                   lock.release();
                 }

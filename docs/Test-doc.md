@@ -336,6 +336,12 @@ CRC32：C933524D
 
 ![Snipaste_2018-12-02_20-57-00](Test-doc/Snipaste_2018-12-02_20-57-00.jpg)
 
+
+
+![large](./Test-doc/large.gif)
+
+
+
 完全接收之后一共花了不到5分钟
 
 ![Snipaste_2018-12-02_20-57-29](Test-doc/Snipaste_2018-12-02_20-57-29.jpg)

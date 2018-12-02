@@ -2,7 +2,7 @@
 
 Send and receive big file by UDP
 
-![lftp](./docs/Test-doc/get.gif)
+![lftp](./docs/Test-doc/large.gif)
 
 
 
