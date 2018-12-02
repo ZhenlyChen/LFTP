@@ -272,9 +272,15 @@ public class NetSocket implements AutoCloseable {
         ssthresh = cwnd / 2;
         cwnd = ssthresh + 1;
         dupACKCount = 0;
+      } else { // 全部已经发送
+        if (cwnd < ssthresh) { // 小于阈值
+          cwnd *= 2; // TCP Tahoe
+        } else { // 大于阈值
+          cwnd++; // TCP Reno
+        }
       }
     }
-    if (sendPackets.size() != 0) sendPacket();
+    // if (sendPackets.size() != 0) sendPacket();
     // System.out.println("End send");
   }
 
@@ -298,11 +304,6 @@ public class NetSocket implements AutoCloseable {
       lastACK = packet.getAck();
     } else {
       while (sendingPacket.size() != 0 && packet.getAck() >= sendingPacket.getFirst().getSeq()) { // 收到正确的ACK
-        if (cwnd < ssthresh) { // 小于阈值
-          cwnd *= 2; // TCP Tahoe
-        } else { // 大于阈值
-          cwnd++; // TCP Reno
-        }
         lastACK = packet.getAck();
         dupACKCount = 0;
         if (sendingPacket.size() == 0) {
@@ -323,7 +324,6 @@ public class NetSocket implements AutoCloseable {
     }
   }
 
-
   // 处理接收包
   private void dealRecvPacket() {
     while (receivePackets.size() > 0) {
@@ -342,7 +342,7 @@ public class NetSocket implements AutoCloseable {
     if (this.devRTT == 0) this.devRTT = rtt;
     double b = 0.25;
     this.devRTT = (long) ((1 - b) * this.devRTT + b * Math.abs(this.estimateRTT - rtt));
-    this.timeoutInterval = this.estimateRTT + 5 * this.devRTT;
+    this.timeoutInterval = this.estimateRTT + 4 * this.devRTT;
   }
 
   // 封包发送
